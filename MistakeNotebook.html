@@ -1,0 +1,1995 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#171a23">
+<meta name="description" content="A digital mistake notebook for JEE prep — photograph questions and solutions, add notes or voice memos, and sync to your own Google Drive.">
+<title>Mistake Notebook</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Mistakes">
+<meta name="mobile-web-app-capable" content="yes">
+<style>
+  /* ============================= TOKENS ============================= */
+  :root{
+    --bg:#eef0f6;
+    --ink:#1b1e27;
+    --ink-soft:#5b6070;
+    --ink-faint:#626981;
+    --glass-surface: rgba(255,255,255,0.58);
+    --glass-surface-strong: rgba(255,255,255,0.80);
+    --glass-hairline: rgba(255,255,255,0.9);
+    --glass-hairline-soft: rgba(20,25,45,0.14);
+    --shadow-contact: 0 1px 3px rgba(24,28,45,0.10);
+    --shadow-ambient: 0 18px 44px -14px rgba(24,28,45,0.24);
+    --shadow-sheet: 0 -20px 60px -12px rgba(20,24,40,0.32);
+    --blur: 26px;
+    --accent:#d8393a;
+    --accent-2:#ff6f5e;
+    --accent-ink:#ffffff;
+    --accent-soft: rgba(216,57,58,0.13);
+    --accent-glow: rgba(216,57,58,0.28);
+    --ok:#279268;
+    --ok-soft: rgba(39,146,104,0.14);
+    --warn:#c9791f;
+    --warn-soft: rgba(201,121,31,0.14);
+    --phy:#3b7dc4;
+    --chem:#2f9e74;
+    --math:#c9791f;
+    --radius-xl: 30px;
+    --radius-lg: 22px;
+    --radius-md: 16px;
+    --radius-sm: 12px;
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --blob-1: radial-gradient(circle, rgba(216,57,58,0.16), transparent 62%);
+    --blob-2: radial-gradient(circle, rgba(59,125,196,0.14), transparent 62%);
+    --blob-3: radial-gradient(circle, rgba(201,121,31,0.13), transparent 62%);
+  }
+  [data-theme="dark"]{
+    --bg:#0d0f16;
+    --ink:#eef0f6;
+    --ink-soft:#a4a9bb;
+    --ink-faint:#6b7080;
+    --glass-surface: rgba(40,43,58,0.46);
+    --glass-surface-strong: rgba(34,37,50,0.80);
+    --glass-hairline: rgba(255,255,255,0.10);
+    --glass-hairline-soft: rgba(255,255,255,0.05);
+    --shadow-contact: 0 1px 2px rgba(0,0,0,0.35);
+    --shadow-ambient: 0 20px 48px -14px rgba(0,0,0,0.55);
+    --shadow-sheet: 0 -22px 64px -10px rgba(0,0,0,0.6);
+    --accent:#ff6f5e;
+    --accent-2:#ff9284;
+    --accent-ink:#241213;
+    --accent-soft: rgba(255,111,94,0.17);
+    --accent-glow: rgba(255,111,94,0.30);
+    --ok:#3fcf94;
+    --ok-soft: rgba(63,207,148,0.15);
+    --warn:#f0a94a;
+    --warn-soft: rgba(240,169,74,0.15);
+    --phy:#6ea8e8;
+    --chem:#57cd9d;
+    --math:#f0a94a;
+    --blob-1: radial-gradient(circle, rgba(255,111,94,0.14), transparent 62%);
+    --blob-2: radial-gradient(circle, rgba(110,168,232,0.12), transparent 62%);
+    --blob-3: radial-gradient(circle, rgba(240,169,74,0.10), transparent 62%);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    font-family:var(--font);
+    color:var(--ink);
+    background-color: var(--bg);
+    background-image:
+      radial-gradient(600px 480px at 8% -6%, var(--blob-1), transparent 60%),
+      radial-gradient(560px 460px at 96% 14%, var(--blob-2), transparent 60%),
+      radial-gradient(620px 520px at 50% 108%, var(--blob-3), transparent 60%);
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+    transition: background-color .35s ease, color .35s ease;
+    overscroll-behavior-y: contain;
+    letter-spacing: -0.006em;
+  }
+  button{font-family:inherit;}
+  input,textarea,select{font-family:inherit; color:inherit;}
+  ::selection{ background: var(--accent-soft); }
+  :focus-visible{ outline: 2.5px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+
+  .glass{
+    background: var(--glass-surface);
+    backdrop-filter: blur(var(--blur)) saturate(180%);
+    -webkit-backdrop-filter: blur(var(--blur)) saturate(180%);
+    border: 1px solid var(--glass-hairline-soft);
+    box-shadow:
+      0 1px 0 var(--glass-hairline) inset,
+      0 -1px 0 rgba(0,0,0,0.05) inset,
+      var(--shadow-ambient);
+  }
+
+  /* ============================= LAYOUT ============================= */
+  #app{ max-width: 1180px; margin: 0 auto; padding: 18px 18px 120px; }
+
+  .topbar{
+    position: sticky; top: 12px; z-index: 40;
+    display:flex; align-items:center; gap:10px;
+    padding: 9px 10px 9px 16px;
+    border-radius: 999px;
+    margin-bottom: 18px;
+  }
+  .brand{ display:flex; align-items:center; gap:10px; margin-right: 2px; flex-shrink:0; }
+  .brand-mark{
+    width:32px; height:32px; border-radius:11px;
+    background: linear-gradient(155deg, var(--accent-2), var(--accent) 70%);
+    display:flex; align-items:center; justify-content:center;
+    color:#fff; position:relative; overflow:hidden;
+    box-shadow: 0 4px 12px -2px var(--accent-glow), 0 1px 0 rgba(255,255,255,0.35) inset;
+    flex-shrink:0;
+  }
+  .brand-text{ display:flex; flex-direction:column; line-height:1.12; }
+  .brand-text b{ font-size:14.5px; letter-spacing:-0.02em; font-weight:700; }
+  .brand-text span{ font-size:10.5px; color:var(--ink-faint); font-weight:500; }
+
+  .search-wrap{
+    flex:1; min-width: 0;
+    display:flex; align-items:center; gap:8px;
+    background: rgba(127,127,127,0.10);
+    border: 1px solid var(--glass-hairline-soft);
+    border-radius: 999px;
+    padding: 8px 14px;
+  }
+  .search-wrap input{
+    border:none; background:transparent; outline:none; width:100%;
+    font-size:13.5px; color:var(--ink);
+  }
+  .search-wrap input::placeholder{ color: var(--ink-faint); }
+  .search-wrap svg{ color:var(--ink-faint); flex-shrink:0; }
+
+  .icon-btn{
+    width:36px; height:36px; border-radius:50%; border:1px solid var(--glass-hairline-soft);
+    background: var(--glass-surface);
+    backdrop-filter: blur(16px) saturate(160%);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
+    box-shadow: 0 1px 0 var(--glass-hairline) inset, var(--shadow-contact);
+    color: var(--ink-soft);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; flex-shrink:0;
+    transition: transform .15s ease, background .15s ease, color .15s ease, box-shadow .15s ease;
+  }
+  .icon-btn:hover{ background: var(--glass-surface-strong); color:var(--ink); box-shadow: 0 1px 0 var(--glass-hairline) inset, var(--shadow-ambient); }
+  .icon-btn:active{ transform: scale(0.90); }
+  .icon-btn.on{ background: var(--ok-soft); color: var(--ok); border-color: transparent; }
+  .icon-btn.warn-state{ background: var(--warn-soft); color: var(--warn); border-color: transparent; }
+
+  .sync-pill{
+    display:flex; align-items:center; gap:6px;
+    font-size:11px; font-weight:650; color: var(--ink-soft);
+    padding: 7px 12px 7px 9px; border-radius:999px;
+    background: var(--glass-surface);
+    backdrop-filter: blur(16px) saturate(160%);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
+    border: 1px solid var(--glass-hairline-soft);
+    box-shadow: 0 1px 0 var(--glass-hairline) inset, var(--shadow-contact);
+    flex-shrink:0; white-space:nowrap;
+    cursor:pointer; letter-spacing:-0.01em;
+  }
+  .sync-dot{ width:6px; height:6px; border-radius:50%; background: var(--ink-faint); }
+  .sync-pill.local .sync-dot{ background: var(--ink-faint); }
+  .sync-pill.syncing .sync-dot{ background: var(--warn); animation: pulseDot 1s infinite ease-in-out; }
+  .sync-pill.synced .sync-dot{ background: var(--ok); }
+  .sync-pill.error .sync-dot{ background: var(--accent); }
+  @keyframes pulseDot{ 0%,100%{opacity:1;} 50%{opacity:.3;} }
+
+  .tabsbar{ display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
+  .tabs{ position:relative; display:flex; gap:2px; padding:4px; border-radius:999px; }
+  .tab-thumb{
+    position:absolute; top:4px; left:0; height: calc(100% - 8px);
+    border-radius:999px; background: var(--glass-surface-strong);
+    box-shadow: 0 1px 0 var(--glass-hairline) inset, var(--shadow-contact), 0 4px 14px -4px rgba(24,28,45,0.18);
+    transition: transform .32s cubic-bezier(.2,.9,.2,1), width .32s cubic-bezier(.2,.9,.2,1);
+    pointer-events:none; z-index:0;
+  }
+  .tab{
+    position:relative; z-index:1;
+    border:none; background:transparent; padding:7px 15px; border-radius:999px;
+    font-size:13px; font-weight:600; color: var(--ink-soft); cursor:pointer;
+    display:flex; align-items:center; gap:6px; white-space:nowrap;
+    transition: color .18s ease;
+  }
+  .tab .dot{ width:6px; height:6px; border-radius:50%; }
+  .tab.active{ color: var(--ink); }
+
+  .filter-row{ display:flex; gap:8px; margin-left:auto; flex-wrap:wrap; }
+  .dropdown{ position:relative; }
+  .pill-select-btn{
+    border:1px solid var(--glass-hairline-soft); padding:8px 14px; border-radius:999px;
+    font-size:12.5px; font-weight:650; color:var(--ink); cursor:pointer;
+    background-color: var(--glass-surface);
+    backdrop-filter: blur(16px) saturate(160%);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
+    box-shadow: 0 1px 0 var(--glass-hairline) inset, var(--shadow-contact);
+    display:flex; align-items:center; gap:8px;
+    transition: box-shadow .15s ease, background-color .15s ease;
+  }
+  .pill-select-btn:hover{ background-color: var(--glass-surface-strong); box-shadow: 0 1px 0 var(--glass-hairline) inset, var(--shadow-ambient); }
+  .dd-chevron{ color: var(--ink-faint); flex-shrink:0; transition: transform .2s ease; }
+  .dropdown.open .dd-chevron{ transform: rotate(180deg); }
+
+  .dropdown-menu{
+    position:absolute; top:calc(100% + 8px); right:0; min-width:180px; z-index:60;
+    border-radius: var(--radius-md); padding:6px;
+    background: var(--glass-surface-strong);
+    backdrop-filter: blur(30px) saturate(190%);
+    -webkit-backdrop-filter: blur(30px) saturate(190%);
+    border: 1px solid var(--glass-hairline-soft);
+    box-shadow: 0 1px 0 var(--glass-hairline) inset, var(--shadow-ambient), 0 22px 44px -14px rgba(10,12,20,0.28);
+    opacity:0; transform: translateY(-6px) scale(0.97); pointer-events:none;
+    transition: opacity .16s ease, transform .18s cubic-bezier(.2,.9,.25,1);
+  }
+  .dropdown.open .dropdown-menu{ opacity:1; transform: translateY(0) scale(1); pointer-events:auto; }
+  .dropdown-item{
+    padding:9px 12px; border-radius: var(--radius-sm); font-size:13px; font-weight:600;
+    color: var(--ink-soft); cursor:pointer; white-space:nowrap;
+    transition: background .12s ease, color .12s ease;
+  }
+  .dropdown-item:hover{ background: rgba(127,127,127,0.14); color:var(--ink); }
+  .dropdown-item.sel{ background: var(--accent-soft); color: var(--accent); }
+
+  .grid{
+    display:grid; grid-template-columns: repeat(auto-fill, minmax(240px,1fr)); gap:16px;
+  }
+
+  .empty-state{
+    grid-column: 1/-1; text-align:center; padding: 76px 20px; color: var(--ink-faint);
+    display:flex; flex-direction:column; align-items:center; gap:14px;
+  }
+  .empty-state svg{ opacity:.45; }
+  .empty-state b{ color: var(--ink-soft); font-size:15.5px; font-weight:650; }
+  .empty-state span{ font-size:13px; }
+
+  /* ---- entry card ---- */
+  .entry-card{
+    border-radius: var(--radius-lg);
+    overflow:hidden;
+    cursor:pointer;
+    display:flex; flex-direction:column;
+    transition: transform .2s cubic-bezier(.2,.8,.3,1), box-shadow .2s ease;
+    position:relative;
+  }
+  .entry-card:hover{ transform: translateY(-4px); }
+  .entry-thumb{
+    aspect-ratio: 4/3; width:100%; object-fit:cover; display:block;
+    background: rgba(127,127,127,0.12);
+  }
+  .entry-thumb-placeholder{
+    aspect-ratio:4/3; width:100%; display:flex; align-items:center; justify-content:center;
+    background: rgba(127,127,127,0.08); color: var(--ink-faint);
+  }
+  .entry-subject-tag{
+    position:absolute; top:10px; left:10px; font-size:10px; font-weight:700;
+    padding:5px 10px; border-radius:999px; letter-spacing:-0.01em;
+    color: var(--tag-c, var(--ink));
+    background: color-mix(in srgb, var(--tag-c, var(--ink-faint)) 22%, white 78%);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  [data-theme="dark"] .entry-subject-tag{
+    background: color-mix(in srgb, var(--tag-c, var(--ink-faint)) 30%, black 70%);
+  }
+  .entry-status-dot{
+    position:absolute; top:12px; right:12px; width:10px; height:10px; border-radius:50%;
+    box-shadow: 0 0 0 3px rgba(255,255,255,0.55);
+  }
+  [data-theme="dark"] .entry-status-dot{ box-shadow: 0 0 0 3px rgba(18,20,28,0.7); }
+  .entry-status-dot.revision{ background: var(--warn); }
+  .entry-status-dot.mastered{ background: var(--ok); }
+  .entry-body{ padding: 12px 14px 14px; display:flex; flex-direction:column; gap:6px; flex:1; }
+  .entry-chapter{ font-size:14px; font-weight:700; line-height:1.28; letter-spacing:-0.01em; }
+  .entry-meta{ font-size:11.5px; color: var(--ink-faint); display:flex; gap:8px; align-items:center; flex-wrap:wrap;}
+  .entry-chips{ display:flex; gap:5px; flex-wrap:wrap; margin-top:2px;}
+  .mini-chip{
+    font-size:10px; font-weight:600; padding:4px 9px; border-radius:999px;
+    background: rgba(127,127,127,0.10); color: var(--ink-soft);
+  }
+  .entry-note-preview{ font-size:12px; color: var(--ink-soft); line-height:1.4;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .pending-badge{
+    position:absolute; bottom:11px; right:11px; width:22px; height:22px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center; background: rgba(0,0,0,0.5); color:#fff;
+    backdrop-filter: blur(6px);
+  }
+
+  /* ---- fab ---- */
+  .fab{
+    position:fixed; right:22px; bottom:26px; z-index:45;
+    width:58px; height:58px; border-radius:50%; border:none; cursor:pointer;
+    background: linear-gradient(155deg, var(--accent-2), var(--accent) 70%);
+    color:#fff; display:flex; align-items:center; justify-content:center;
+    box-shadow: 0 14px 30px -8px var(--accent-glow), 0 1px 0 rgba(255,255,255,0.4) inset;
+    transition: transform .16s ease;
+  }
+  .fab:active{ transform: scale(0.9); }
+
+  /* ============================= MODALS ============================= */
+  .overlay{
+    position:fixed; inset:0; background: rgba(10,12,18,0.38); backdrop-filter: blur(4px);
+    display:flex; align-items:flex-end; justify-content:center; z-index:100;
+    opacity:0; pointer-events:none; transition: opacity .25s ease;
+  }
+  .overlay.show{ opacity:1; pointer-events:auto; }
+  @media (min-width: 720px){ .overlay{ align-items:center; } }
+
+  .modal{
+    width:100%; max-width: 640px; max-height: 92vh; overflow:auto;
+    border-radius: 30px 30px 0 0;
+    background: var(--glass-surface-strong);
+    backdrop-filter: blur(32px) saturate(190%);
+    -webkit-backdrop-filter: blur(32px) saturate(190%);
+    border: 1px solid var(--glass-hairline-soft);
+    box-shadow: 0 1px 0 var(--glass-hairline) inset, var(--shadow-sheet);
+    transform: translateY(28px) scale(0.99); opacity:0;
+    transition: transform .26s cubic-bezier(.2,.9,.25,1), opacity .22s ease;
+    padding: 20px 20px calc(24px + env(safe-area-inset-bottom));
+  }
+  .overlay.show .modal{ transform: translateY(0) scale(1); opacity:1; }
+  @media (min-width: 720px){ .modal{ border-radius: 28px; } }
+
+  .modal-drag{ width:36px; height:4.5px; border-radius:99px; background: rgba(127,127,127,.3); margin: 0 auto 14px; }
+  .modal-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; gap:10px; }
+  .modal-head h2{ font-size:18px; margin:0; letter-spacing:-0.02em; font-weight:700; }
+
+  .field{ margin-bottom:16px; }
+  .field label{ display:block; font-size:12.5px; font-weight:650; color: var(--ink-soft); margin-bottom:7px; }
+  .field-hint{ font-size:11px; color: var(--ink-faint); margin-top:5px; line-height:1.4; }
+  .input, textarea.input{
+    width:100%; padding:11px 13px; border-radius: var(--radius-sm); border:1px solid var(--glass-hairline-soft);
+    background: rgba(127,127,127,0.08); font-size:14px; color:var(--ink); outline:none;
+    transition: background .15s ease, border-color .15s ease;
+  }
+  .input:focus, textarea.input:focus{ background: rgba(127,127,127,0.13); }
+  textarea.input{ resize: vertical; min-height:64px; line-height:1.45; }
+
+  .subject-picker{ display:flex; gap:8px; }
+  .subject-opt{
+    flex:1; padding:11px 8px; border-radius: var(--radius-sm); border:1.5px solid transparent;
+    background: rgba(127,127,127,0.08); font-size:13px; font-weight:700; cursor:pointer;
+    text-align:center; color: var(--ink-soft); transition: all .15s ease;
+  }
+  .subject-opt.sel{ color:#fff; border-color: transparent; box-shadow: 0 6px 16px -6px rgba(0,0,0,0.3); }
+
+  .chip-row{ display:flex; gap:8px; flex-wrap:wrap; }
+  .chip-toggle{
+    border:1.5px solid var(--glass-hairline-soft); background: rgba(127,127,127,0.08); padding:8px 13px;
+    border-radius:999px; font-size:12.5px; font-weight:600; color: var(--ink-soft); cursor:pointer;
+    transition: all .15s ease;
+  }
+  .chip-toggle.on{ background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+
+  .status-toggle{ display:flex; gap:8px; }
+  .status-opt{
+    flex:1; padding:10px; border-radius: var(--radius-sm); text-align:center; cursor:pointer;
+    background: rgba(127,127,127,0.08); font-size:13px; font-weight:700; color: var(--ink-soft);
+    display:flex; align-items:center; justify-content:center; gap:6px;
+  }
+  .status-opt.sel.revision{ background: var(--warn-soft); color: var(--warn); }
+  .status-opt.sel.mastered{ background: var(--ok-soft); color: var(--ok); }
+
+  .photo-strip{ display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px; }
+  .photo-thumb{
+    width:76px; height:76px; border-radius:14px; overflow:hidden; position:relative; flex-shrink:0;
+    background: rgba(127,127,127,0.12); border: 1px solid var(--glass-hairline-soft);
+  }
+  .photo-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .photo-remove{
+    position:absolute; top:3px; right:3px; width:19px; height:19px; border-radius:50%;
+    background: rgba(0,0,0,0.55); color:#fff; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer;
+    backdrop-filter: blur(4px);
+  }
+  .photo-add-row{ display:flex; gap:8px; }
+  .btn{
+    border:none; border-radius:999px; padding:10px 16px; font-size:13px; font-weight:650; cursor:pointer;
+    display:inline-flex; align-items:center; gap:7px; transition: transform .12s ease, opacity .12s ease;
+    background: rgba(127,127,127,0.10); color: var(--ink);
+  }
+  .btn:active{ transform: scale(0.96); }
+  .btn.primary{
+    background: linear-gradient(155deg, var(--accent-2), var(--accent) 70%); color:#fff;
+    box-shadow: 0 8px 18px -6px var(--accent-glow), 0 1px 0 rgba(255,255,255,0.35) inset;
+  }
+  .btn.ghost{ background: var(--glass-surface); border:1px solid var(--glass-hairline-soft); backdrop-filter: blur(14px); }
+  .btn.block{ width:100%; justify-content:center; }
+  .btn.danger{ background: var(--accent-soft); color: var(--accent); }
+  .btn:disabled{ opacity:.45; cursor:not-allowed; }
+  .btn.sm{ padding:7px 12px; font-size:12px; }
+
+  .recorder-box{
+    display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius: var(--radius-sm);
+    background: rgba(127,127,127,0.08); border: 1px solid var(--glass-hairline-soft);
+  }
+  .rec-btn{
+    width:44px; height:44px; border-radius:50%; border:none; cursor:pointer; flex-shrink:0;
+    background: linear-gradient(155deg, var(--accent-2), var(--accent) 70%); color:#fff;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow: 0 6px 14px -5px var(--accent-glow);
+  }
+  .rec-btn.recording{ animation: recPulse 1.2s infinite; }
+  @keyframes recPulse{ 0%{box-shadow:0 0 0 0 rgba(216,57,58,.45);} 70%{box-shadow:0 0 0 13px rgba(216,57,58,0);} 100%{box-shadow:0 0 0 0 rgba(216,57,58,0);} }
+  .rec-info{ flex:1; font-size:12.5px; color: var(--ink-soft); }
+  .rec-time{ font-weight:700; color:var(--ink); font-variant-numeric: tabular-nums; }
+  audio{ width:100%; height:36px; margin-top:8px; border-radius:99px; }
+
+  .modal-actions{ display:flex; gap:10px; margin-top:6px; }
+
+  /* ---- view modal ---- */
+  .lightbox-strip{ display:flex; gap:8px; overflow-x:auto; padding-bottom:6px; margin-bottom:6px; }
+  .lightbox-strip img{ height:280px; max-height:52vh; border-radius:18px; object-fit:contain; background: rgba(127,127,127,0.08); flex-shrink:0; }
+  .section-label{ font-size:11.5px; font-weight:650; color: var(--ink-faint); margin: 16px 0 8px; letter-spacing:0; }
+  .view-note{ font-size:14.5px; line-height:1.6; white-space:pre-wrap; }
+  .view-meta-row{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:10px; }
+
+  /* ---- settings ---- */
+  .settings-section{ padding: 15px 0; border-bottom:1px solid var(--glass-hairline-soft); }
+  .settings-section:last-child{ border-bottom:none; }
+  .settings-section h3{ font-size:13px; margin:0 0 10px; color: var(--ink-soft); font-weight:650; }
+  .kv-row{ display:flex; justify-content:space-between; align-items:center; font-size:13px; padding:6px 0; }
+  .kv-row span:first-child{ color: var(--ink-faint); }
+  .theme-row{ display:flex; gap:8px; }
+  .theme-opt{ flex:1; padding:10px; border-radius: var(--radius-sm); background: rgba(127,127,127,0.08); text-align:center; font-size:12.5px; font-weight:650; cursor:pointer; color:var(--ink-soft); }
+  .theme-opt.sel{ background: var(--accent-soft); color: var(--accent); }
+  details.help-box{ margin-top:10px; font-size:12.5px; color: var(--ink-soft); background: rgba(127,127,127,0.06); border-radius:14px; padding:11px 13px; }
+  details.help-box summary{ cursor:pointer; font-weight:650; color: var(--ink); }
+  details.help-box ol{ margin:8px 0 0; padding-left:18px; line-height:1.65; }
+  details.help-box code{ background: rgba(127,127,127,0.16); padding:1px 5px; border-radius:5px; font-size:11.5px; }
+
+  .google-signin-btn{
+    width:100%; display:flex; align-items:center; justify-content:center; gap:10px;
+    padding:12px 16px; border-radius:999px; border:1px solid var(--glass-hairline-soft);
+    background: var(--glass-surface-strong); color: var(--ink); font-size:14px; font-weight:650;
+    cursor:pointer; transition: transform .12s ease, box-shadow .15s ease;
+  }
+  .google-signin-btn:hover{ box-shadow: var(--shadow-ambient); }
+  .google-signin-btn:active{ transform: scale(0.98); }
+
+  .signin-banner{
+    display:flex; align-items:center; gap:12px; padding:13px 16px; border-radius: var(--radius-lg);
+    margin-bottom:16px;
+  }
+  .signin-banner p{ margin:0; font-size:12.5px; color: var(--ink-soft); flex:1; line-height:1.4; }
+  .signin-banner .btn{ flex-shrink:0; }
+  .signin-banner-close{ background:none; border:none; color: var(--ink-faint); cursor:pointer; font-size:18px; line-height:1; padding:2px 4px; flex-shrink:0; }
+
+  /* ---- toast ---- */
+  .toast-container{ position:fixed; top:16px; left:50%; transform:translateX(-50%); z-index:200; display:flex; flex-direction:column; gap:8px; align-items:center; width:100%; padding: 0 16px; pointer-events:none; }
+  .toast{
+    pointer-events:auto; padding:11px 18px; border-radius:999px; font-size:13px; font-weight:600;
+    background: rgba(24,26,34,0.85); backdrop-filter: blur(16px); color:#fff;
+    box-shadow: 0 10px 26px -6px rgba(0,0,0,0.35);
+    animation: toastIn .25s ease; max-width: 92vw; text-align:center;
+  }
+  [data-theme="dark"] .toast{ background: rgba(240,241,247,0.9); color:#181a22; }
+  @keyframes toastIn{ from{opacity:0; transform:translateY(-8px);} to{opacity:1; transform:translateY(0);} }
+
+  .confirm-modal{ max-width:340px; text-align:center; border-radius: var(--radius-xl) !important; }
+  .confirm-modal p{ color: var(--ink-soft); font-size:13.5px; line-height:1.5; }
+
+  @media (max-width: 560px){
+    #app{ padding: 12px 12px 110px; }
+    .brand-text span{ display:none; }
+    .filter-row{ margin-left:0; width:100%; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header class="topbar glass">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 4.5A2.5 2.5 0 0 1 7.5 2H18a1 1 0 0 1 1 1v17a1 1 0 0 1-1 1H7.5A2.5 2.5 0 0 1 5 18.5v-14Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M5 18.5a2.5 2.5 0 0 1 2.5-2.5H19" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M9 7h6M9 10h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+      <div class="brand-text"><b>Mistake Notebook</b><span>JEE prep, digitised</span></div>
+    </div>
+    <div class="search-wrap">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="m21 21-4.3-4.3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <input id="searchInput" type="text" placeholder="Search chapter, source or notes…">
+    </div>
+    <button class="sync-pill local" id="syncPill" title="Sync status">
+      <span class="sync-dot"></span><span id="syncPillText">Local only</span>
+    </button>
+    <button class="icon-btn" id="themeBtn" title="Toggle theme">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 3v2M12 19v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M3 12h2M19 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="12" r="4.2" stroke="currentColor" stroke-width="1.8"/></svg>
+    </button>
+    <button class="icon-btn" id="settingsBtn" title="Settings">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z" stroke="currentColor" stroke-width="1.7"/><path d="M19.4 13.5c.05-.5.05-1 0-1.5l1.9-1.4-1.9-3.3-2.2.7a7.7 7.7 0 0 0-1.3-.75L15.5 5h-3.8l-.4 2.25c-.47.2-.9.45-1.3.75l-2.2-.7-1.9 3.3 1.9 1.4a6.9 6.9 0 0 0 0 1.5l-1.9 1.4 1.9 3.3 2.2-.7c.4.3.83.55 1.3.75l.4 2.25h3.8l.4-2.25c.47-.2.9-.45 1.3-.75l2.2.7 1.9-3.3-1.9-1.4Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+    </button>
+  </header>
+
+  <div class="tabsbar">
+    <div class="tabs glass" id="subjectTabs">
+      <span class="tab-thumb" id="tabThumb"></span>
+      <button class="tab active" data-subject="ALL">All</button>
+      <button class="tab" data-subject="PHY"><span class="dot" style="background:var(--phy)"></span>Physics</button>
+      <button class="tab" data-subject="CHEM"><span class="dot" style="background:var(--chem)"></span>Chemistry</button>
+      <button class="tab" data-subject="MATH"><span class="dot" style="background:var(--math)"></span>Maths</button>
+    </div>
+    <div class="filter-row">
+      <div class="dropdown" id="statusDropdown">
+        <button class="pill-select-btn" type="button">
+          <span class="dd-label">All statuses</span>
+          <svg class="dd-chevron" width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="dropdown-menu">
+          <div class="dropdown-item sel" data-value="ALL">All statuses</div>
+          <div class="dropdown-item" data-value="revision">Needs revision</div>
+          <div class="dropdown-item" data-value="mastered">Mastered</div>
+        </div>
+      </div>
+      <div class="dropdown" id="sortDropdown">
+        <button class="pill-select-btn" type="button">
+          <span class="dd-label">Newest first</span>
+          <svg class="dd-chevron" width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="dropdown-menu">
+          <div class="dropdown-item sel" data-value="new">Newest first</div>
+          <div class="dropdown-item" data-value="old">Oldest first</div>
+          <div class="dropdown-item" data-value="subject">By subject</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="signin-banner glass" id="signinBanner" style="display:none">
+    <p>Sign in with Google to sync this notebook across your devices.</p>
+    <button class="btn primary sm" id="bannerSignInBtn">Sign in with Google</button>
+    <button class="signin-banner-close" id="bannerCloseBtn" title="Dismiss">&times;</button>
+  </div>
+
+  <div class="grid" id="entriesGrid"></div>
+</div>
+
+<button class="fab" id="fabAdd" title="Add mistake">
+  <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+</button>
+
+<!-- ============================= ENTRY MODAL ============================= -->
+<div class="overlay" id="entryOverlay">
+  <div class="modal" id="entryModal">
+    <div class="modal-drag"></div>
+    <div class="modal-head">
+      <h2 id="entryModalTitle">New mistake</h2>
+      <button class="icon-btn" id="entryCloseBtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    </div>
+
+    <div class="field">
+      <label>Subject</label>
+      <div class="subject-picker" id="subjectPicker">
+        <div class="subject-opt" data-subject="PHY">Physics</div>
+        <div class="subject-opt" data-subject="CHEM">Chemistry</div>
+        <div class="subject-opt" data-subject="MATH">Maths</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="chapterInput">Chapter / topic</label>
+      <input class="input" id="chapterInput" list="chapterList" placeholder="e.g. Rotational Motion">
+      <datalist id="chapterList"></datalist>
+    </div>
+
+    <div class="field">
+      <label for="sourceInput">Source <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label>
+      <input class="input" id="sourceInput" placeholder="e.g. JEE Main 2024, Allen DPP-12">
+    </div>
+
+    <div class="field">
+      <label>What went wrong?</label>
+      <div class="chip-row" id="mistakeChips">
+        <div class="chip-toggle" data-val="Conceptual Gap">Conceptual gap</div>
+        <div class="chip-toggle" data-val="Silly / Calculation Error">Silly / calculation error</div>
+        <div class="chip-toggle" data-val="Misread Question">Misread question</div>
+        <div class="chip-toggle" data-val="Time Pressure">Time pressure</div>
+        <div class="chip-toggle" data-val="Formula Mixed Up">Formula mixed up</div>
+        <div class="chip-toggle" data-val="Other">Other</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Question photo(s)</label>
+      <div class="photo-strip" id="qPhotoStrip"></div>
+      <div class="photo-add-row">
+        <button class="btn sm" id="qCameraBtn">📷 Take photo</button>
+        <button class="btn sm ghost" id="qGalleryBtn">🖼 Choose photos</button>
+      </div>
+      <input type="file" id="qCameraInput" accept="image/*" capture="environment" style="display:none">
+      <input type="file" id="qGalleryInput" accept="image/*" multiple style="display:none">
+    </div>
+
+    <div class="field">
+      <label>Correct solution photo(s) <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label>
+      <div class="photo-strip" id="sPhotoStrip"></div>
+      <div class="photo-add-row">
+        <button class="btn sm" id="sCameraBtn">📷 Take photo</button>
+        <button class="btn sm ghost" id="sGalleryBtn">🖼 Choose photos</button>
+      </div>
+      <input type="file" id="sCameraInput" accept="image/*" capture="environment" style="display:none">
+      <input type="file" id="sGalleryInput" accept="image/*" multiple style="display:none">
+    </div>
+
+    <div class="field">
+      <label for="noteInput">Notes <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label>
+      <textarea class="input" id="noteInput" placeholder="What should you remember next time?"></textarea>
+    </div>
+
+    <div class="field">
+      <label>Voice note <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label>
+      <div class="recorder-box">
+        <button class="rec-btn" id="recBtn" title="Record">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="9" y="4" width="6" height="10" rx="3" fill="currentColor"/><path d="M6 11a6 6 0 0 0 12 0M12 17v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+        <div class="rec-info" id="recInfo">Tap to record a voice note</div>
+        <button class="btn sm ghost" id="recDeleteBtn" style="display:none">Delete</button>
+      </div>
+      <audio id="recAudioPreview" controls style="display:none"></audio>
+    </div>
+
+    <div class="field">
+      <label>Status</label>
+      <div class="status-toggle" id="statusToggle">
+        <div class="status-opt revision sel" data-status="revision">🟠 Needs revision</div>
+        <div class="status-opt mastered" data-status="mastered">✅ Mastered</div>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn ghost" id="entryCancelBtn" style="flex:1">Cancel</button>
+      <button class="btn primary block" id="entrySaveBtn" style="flex:2">Save entry</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================= VIEW MODAL ============================= -->
+<div class="overlay" id="viewOverlay">
+  <div class="modal" id="viewModal">
+    <div class="modal-drag"></div>
+    <div class="modal-head">
+      <h2 id="viewChapter">Entry</h2>
+      <button class="icon-btn" id="viewCloseBtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    </div>
+    <div class="view-meta-row" id="viewMetaRow"></div>
+
+    <div class="section-label">Question</div>
+    <div class="lightbox-strip" id="viewQPhotos"></div>
+
+    <div id="viewSolutionBlock">
+      <div class="section-label">Correct solution</div>
+      <div class="lightbox-strip" id="viewSPhotos"></div>
+    </div>
+
+    <div id="viewNoteBlock">
+      <div class="section-label">Notes</div>
+      <div class="view-note" id="viewNoteText"></div>
+    </div>
+
+    <div id="viewVoiceBlock">
+      <div class="section-label">Voice note</div>
+      <audio id="viewAudio" controls style="width:100%"></audio>
+    </div>
+
+    <div class="modal-actions" style="margin-top:18px">
+      <button class="btn ghost" id="viewDeleteBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0-.7 12.1a2 2 0 0 1-2 1.9H9.7a2 2 0 0 1-2-1.9L7 7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg> Delete</button>
+      <button class="btn ghost" id="viewToggleStatusBtn" style="flex:1">Mark as mastered</button>
+      <button class="btn primary" id="viewEditBtn">Edit</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================= SETTINGS MODAL ============================= -->
+<div class="overlay" id="settingsOverlay">
+  <div class="modal" id="settingsModal">
+    <div class="modal-drag"></div>
+    <div class="modal-head">
+      <h2>Settings</h2>
+      <button class="icon-btn" id="settingsCloseBtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    </div>
+
+    <div class="settings-section">
+      <h3>Appearance</h3>
+      <div class="theme-row" id="themeRow">
+        <div class="theme-opt" data-theme="light">☀️ Light</div>
+        <div class="theme-opt" data-theme="dark">🌙 Dark</div>
+        <div class="theme-opt" data-theme="system">💻 System</div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3>Google Drive sync</h3>
+
+      <div id="driveSignInBlock" style="display:none">
+        <button class="google-signin-btn" id="googleSignInBtn">
+          <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l6-6C34.5 5.5 29.6 3.5 24 3.5 12.7 3.5 3.5 12.7 3.5 24S12.7 44.5 24 44.5 44.5 35.3 44.5 24c0-1.2-.1-2.4-.3-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.6 15.9 18.9 13 24 13c3.1 0 5.8 1.1 8 3l6-6C34.5 6.5 29.6 4.5 24 4.5c-7.7 0-14.4 4.3-17.7 10.2z"/><path fill="#4CAF50" d="M24 44.5c5.5 0 10.4-1.9 14.1-5.1l-6.5-5.5C29.6 35.5 26.9 36.5 24 36.5c-5.3 0-9.7-3.3-11.3-8l-6.6 5.1C9.5 40.1 16.2 44.5 24 44.5z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.2-4.2 5.5l6.5 5.5C41 35.9 44.5 30.5 44.5 24c0-1.2-.1-2.4-.3-3.5z"/></svg>
+          <span>Sign in with Google</span>
+        </button>
+        <p class="field-hint" style="margin-top:10px">Syncs this notebook to a private "JEE Mistake Notebook" folder in your own Drive. Only your account can see it.</p>
+        <details class="help-box">
+          <summary>Using a different Google account, or something went wrong?</summary>
+          <p style="margin:0 0 8px">Signing in again lets you switch accounts. If the popup fails to open, your browser may be blocking it — allow popups for this page and try again.</p>
+          <button class="btn ghost sm" id="editClientIdBtn">Use a different Client ID</button>
+        </details>
+      </div>
+
+      <div id="driveDisconnectedBlock">
+        <p class="field-hint" style="margin:0 0 10px">One-time setup — do this once, ever. After this, every visit is just "Sign in with Google".</p>
+        <div class="field">
+          <label for="clientIdInput">Google OAuth Client ID</label>
+          <input class="input" id="clientIdInput" placeholder="xxxxxxxx.apps.googleusercontent.com">
+        </div>
+        <button class="btn primary block" id="connectDriveBtn">Save & sign in</button>
+        <details class="help-box">
+          <summary>How do I get a Client ID?</summary>
+          <ol>
+            <li>Go to <code>console.cloud.google.com</code> and create a project.</li>
+            <li>Enable the <b>Google Drive API</b> for it.</li>
+            <li>Configure the OAuth consent screen (External, add yourself as a test user).</li>
+            <li>Create an <b>OAuth Client ID</b> of type "Web application".</li>
+            <li>Add the exact URL where this page is hosted under "Authorized JavaScript origins".</li>
+            <li>Paste the generated Client ID above.</li>
+          </ol>
+          <p style="margin:10px 0 0">Tip: this ID isn't secret — edit the <code>DEFAULT_CLIENT_ID</code> constant near the top of the file's script and re-upload it. Every device that opens this page will then go straight to a "Sign in with Google" button — nothing to paste, ever, on any device.</p>
+        </details>
+      </div>
+      <div id="driveConnectedBlock" style="display:none">
+        <div class="kv-row"><span>Status</span><span id="driveStatusText" style="font-weight:700;color:var(--ok)">Connected</span></div>
+        <div class="kv-row"><span>Last synced</span><span id="lastSyncText">—</span></div>
+        <div class="modal-actions">
+          <button class="btn ghost" id="syncNowBtn" style="flex:1">Sync now</button>
+          <button class="btn danger" id="disconnectDriveBtn" style="flex:1">Disconnect</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3>Local backup</h3>
+      <p style="font-size:12.5px;color:var(--ink-soft);margin:0 0 10px">Works even without Drive — a full offline copy of everything, downloaded to your device.</p>
+      <div class="modal-actions">
+        <button class="btn ghost" id="exportBackupBtn" style="flex:1">Export backup</button>
+        <button class="btn ghost" id="importBackupBtn" style="flex:1">Import backup</button>
+      </div>
+      <input type="file" id="importBackupInput" accept="application/json" style="display:none">
+    </div>
+
+    <div class="settings-section">
+      <h3>Danger zone</h3>
+      <button class="btn danger block" id="clearAllBtn">Delete all local data</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================= CONFIRM MODAL ============================= -->
+<div class="overlay" id="confirmOverlay">
+  <div class="modal confirm-modal" id="confirmModal">
+    <h2 id="confirmTitle" style="font-size:16px;margin:4px 0 8px">Are you sure?</h2>
+    <p id="confirmBody">This cannot be undone.</p>
+    <div class="modal-actions">
+      <button class="btn ghost" id="confirmCancelBtn" style="flex:1">Cancel</button>
+      <button class="btn danger" id="confirmOkBtn" style="flex:1">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================================================
+   CONSTANTS
+============================================================ */
+const SUBJECTS = {
+  PHY:  {label:'Physics',   color:'var(--phy)'},
+  CHEM: {label:'Chemistry', color:'var(--chem)'},
+  MATH: {label:'Maths',     color:'var(--math)'}
+};
+const DRIVE_FOLDER_NAME = 'JEE Mistake Notebook';
+const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+// Optional: once you have your own Google OAuth Client ID (Settings > Google Drive sync
+// has the steps), paste it here and re-upload the file. Every device that then opens this
+// page already has Drive ready — no need to paste the ID again on each device, just tap
+// "Connect Google Drive" and sign in. This ID is a public identifier, not a secret.
+const DEFAULT_CLIENT_ID = '';
+const LS_ENTRIES = 'mn_entries_v1';
+const LS_SETTINGS = 'mn_settings_v1';
+const LS_TOMBSTONES = 'mn_tombstones_v1';
+
+let state = {
+  entries: [],
+  filterSubject: 'ALL',
+  filterStatus: 'ALL',
+  filterSort: 'new',
+  searchQuery: '',
+  editingId: null,
+  viewingId: null,
+  confirmAction: null,
+  recording: { active:false, chunks:[], mediaRecorder:null, startedAt:0, timerId:null, blob:null, mimeType:'audio/webm', isNew:false },
+  draftPhotos: { q: [], s: [] } // {tempKey, blob}
+};
+
+let settings = loadSettings();
+
+/* ============================================================
+   UTIL
+============================================================ */
+function uid(){ return 'e_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8); }
+function nowIso(){ return new Date().toISOString(); }
+function $(sel){ return document.querySelector(sel); }
+function $all(sel){ return Array.from(document.querySelectorAll(sel)); }
+function esc(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function toast(msg, ms){
+  const c = $('#toastContainer');
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(()=>{ t.style.opacity='0'; t.style.transition='opacity .3s'; setTimeout(()=>t.remove(), 300); }, ms||2400);
+}
+
+function loadSettings(){
+  try{
+    const raw = localStorage.getItem(LS_SETTINGS);
+    const parsed = raw ? JSON.parse(raw) : { theme:'system', clientId:'', lastSync:null };
+    if(!parsed.clientId && DEFAULT_CLIENT_ID) parsed.clientId = DEFAULT_CLIENT_ID;
+    return parsed;
+  }catch(e){ return { theme:'system', clientId: DEFAULT_CLIENT_ID || '', lastSync:null }; }
+}
+function saveSettings(){ localStorage.setItem(LS_SETTINGS, JSON.stringify(settings)); }
+
+function loadEntries(){
+  try{
+    const raw = localStorage.getItem(LS_ENTRIES);
+    return raw ? JSON.parse(raw) : [];
+  }catch(e){ return []; }
+}
+function persistEntries(){ localStorage.setItem(LS_ENTRIES, JSON.stringify(state.entries)); }
+
+function loadTombstones(){
+  try{ return new Set(JSON.parse(localStorage.getItem(LS_TOMBSTONES) || '[]')); }
+  catch(e){ return new Set(); }
+}
+function persistTombstones(){ localStorage.setItem(LS_TOMBSTONES, JSON.stringify(Array.from(tombstones))); }
+let tombstones = loadTombstones();
+
+/* ============================================================
+   INDEXEDDB (blob storage)
+============================================================ */
+const DB_NAME = 'mistakeNotebookBlobs', DB_VERSION = 1;
+let dbPromise = null;
+function openDB(){
+  if(dbPromise) return dbPromise;
+  dbPromise = new Promise((resolve,reject)=>{
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = (e)=>{
+      const db = e.target.result;
+      if(!db.objectStoreNames.contains('blobs')) db.createObjectStore('blobs',{keyPath:'key'});
+    };
+    req.onsuccess = ()=>resolve(req.result);
+    req.onerror = ()=>reject(req.error);
+  });
+  return dbPromise;
+}
+async function idbSetBlob(key, blob, mime){
+  const db = await openDB();
+  return new Promise((res,rej)=>{
+    const tx = db.transaction('blobs','readwrite');
+    tx.objectStore('blobs').put({key, blob, mime: mime||blob.type});
+    tx.oncomplete = ()=>res();
+    tx.onerror = ()=>rej(tx.error);
+  });
+}
+async function idbGetBlob(key){
+  const db = await openDB();
+  return new Promise((res,rej)=>{
+    const tx = db.transaction('blobs','readonly');
+    const r = tx.objectStore('blobs').get(key);
+    r.onsuccess = ()=>res(r.result || null);
+    r.onerror = ()=>rej(r.error);
+  });
+}
+async function idbDeleteBlob(key){
+  const db = await openDB();
+  return new Promise((res,rej)=>{
+    const tx = db.transaction('blobs','readwrite');
+    tx.objectStore('blobs').delete(key);
+    tx.oncomplete = ()=>res();
+    tx.onerror = ()=>rej(tx.error);
+  });
+}
+async function idbGetAllKeys(){
+  const db = await openDB();
+  return new Promise((res,rej)=>{
+    const tx = db.transaction('blobs','readonly');
+    const r = tx.objectStore('blobs').getAllKeys();
+    r.onsuccess = ()=>res(r.result);
+    r.onerror = ()=>rej(r.error);
+  });
+}
+
+const objectUrlCache = new Map();
+async function blobKeyToUrl(key){
+  if(!key) return null;
+  if(objectUrlCache.has(key)) return objectUrlCache.get(key);
+  const rec = await idbGetBlob(key);
+  if(!rec) return null;
+  const url = URL.createObjectURL(rec.blob);
+  objectUrlCache.set(key, url);
+  return url;
+}
+
+/* ============================================================
+   IMAGE / AUDIO HELPERS
+============================================================ */
+function compressImage(fileOrBlob, maxDim, quality){
+  maxDim = maxDim || 1800; quality = quality || 0.85;
+  return new Promise((resolve, reject)=>{
+    const img = new Image();
+    const url = URL.createObjectURL(fileOrBlob);
+    img.onload = ()=>{
+      let w = img.naturalWidth, h = img.naturalHeight;
+      if(w > maxDim || h > maxDim){
+        if(w > h){ h = Math.round(h * maxDim / w); w = maxDim; }
+        else { w = Math.round(w * maxDim / h); h = maxDim; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      canvas.toBlob((blob)=>{
+        URL.revokeObjectURL(url);
+        if(blob) resolve(blob); else reject(new Error('toBlob failed'));
+      }, 'image/jpeg', quality);
+    };
+    img.onerror = (e)=>{ URL.revokeObjectURL(url); reject(e); };
+    img.src = url;
+  });
+}
+
+function pickRecorderMime(){
+  const options = ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg'];
+  for(const o of options){
+    if(window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(o)) return o;
+  }
+  return '';
+}
+
+/* ============================================================
+   PHOTO DRAFT HANDLING (within entry modal, before save)
+============================================================ */
+async function addDraftPhoto(kind, file){
+  try{
+    const compressed = await compressImage(file, 1800, 0.85);
+    const tempKey = 'draft_' + kind + '_' + uid();
+    state.draftPhotos[kind].push({ tempKey, blob: compressed });
+    renderPhotoStrip(kind);
+  }catch(err){
+    console.error(err);
+    toast('Could not read that image');
+  }
+}
+function removeDraftPhoto(kind, tempKey){
+  state.draftPhotos[kind] = state.draftPhotos[kind].filter(p => p.tempKey !== tempKey);
+  renderPhotoStrip(kind);
+}
+function renderPhotoStrip(kind){
+  const strip = kind === 'q' ? $('#qPhotoStrip') : $('#sPhotoStrip');
+  strip.innerHTML = '';
+  state.draftPhotos[kind].forEach(p=>{
+    const div = document.createElement('div');
+    div.className = 'photo-thumb';
+    const img = document.createElement('img');
+    img.src = URL.createObjectURL(p.blob);
+    const rm = document.createElement('button');
+    rm.className = 'photo-remove';
+    rm.innerHTML = '&times;';
+    rm.onclick = (e)=>{ e.stopPropagation(); removeDraftPhoto(kind, p.tempKey); };
+    div.appendChild(img); div.appendChild(rm);
+    strip.appendChild(div);
+  });
+}
+
+/* ============================================================
+   ENTRY MODAL
+============================================================ */
+let selectedSubject = null;
+let selectedMistakeTypes = new Set();
+let selectedStatus = 'revision';
+
+function openEntryModal(existing){
+  state.editingId = existing ? existing.id : null;
+  $('#entryModalTitle').textContent = existing ? 'Edit mistake' : 'New mistake';
+  selectedSubject = existing ? existing.subject : null;
+  selectedMistakeTypes = new Set(existing ? existing.mistakeTypes : []);
+  selectedStatus = existing ? existing.status : 'revision';
+  $('#chapterInput').value = existing ? existing.chapter : '';
+  $('#sourceInput').value = existing ? existing.source : '';
+  $('#noteInput').value = existing ? existing.note : '';
+  state.draftPhotos = { q: [], s: [] };
+  state.recording.blob = null;
+  state.recording.isNew = false;
+  $('#recAudioPreview').style.display = 'none';
+  $('#recAudioPreview').src = '';
+  $('#recDeleteBtn').style.display = 'none';
+  $('#recInfo').textContent = 'Tap to record a voice note';
+
+  populateChapterList();
+  syncSubjectPickerUI();
+  syncMistakeChipsUI();
+  syncStatusToggleUI();
+  renderPhotoStrip('q');
+  renderPhotoStrip('s');
+
+  if(existing){
+    hydrateExistingPhotosIntoDraft(existing);
+  }
+
+  showOverlay('#entryOverlay');
+}
+
+async function hydrateExistingPhotosIntoDraft(existing){
+  for(const p of existing.qPhotos){
+    if(p.key){
+      const rec = await idbGetBlob(p.key);
+      if(rec) state.draftPhotos.q.push({ tempKey: p.key, blob: rec.blob, existingRef: p });
+    }
+  }
+  for(const p of existing.sPhotos){
+    if(p.key){
+      const rec = await idbGetBlob(p.key);
+      if(rec) state.draftPhotos.s.push({ tempKey: p.key, blob: rec.blob, existingRef: p });
+    }
+  }
+  renderPhotoStrip('q'); renderPhotoStrip('s');
+  if(existing.voice && existing.voice.key){
+    const rec = await idbGetBlob(existing.voice.key);
+    if(rec){
+      state.recording.blob = rec.blob;
+      state.recording.mimeType = rec.mime;
+      $('#recAudioPreview').src = URL.createObjectURL(rec.blob);
+      $('#recAudioPreview').style.display = 'block';
+      $('#recDeleteBtn').style.display = 'inline-flex';
+      $('#recInfo').textContent = 'Voice note attached';
+    }
+  }
+}
+
+function populateChapterList(){
+  const chapters = Array.from(new Set(state.entries.map(e=>e.chapter).filter(Boolean)));
+  $('#chapterList').innerHTML = chapters.map(c=>`<option value="${esc(c)}">`).join('');
+}
+
+function syncSubjectPickerUI(){
+  $all('.subject-opt').forEach(el=>{
+    const s = el.dataset.subject;
+    const on = s === selectedSubject;
+    el.classList.toggle('sel', on);
+    el.style.background = on ? SUBJECTS[s].color : '';
+  });
+}
+function syncMistakeChipsUI(){
+  $all('.chip-toggle').forEach(el=>{
+    el.classList.toggle('on', selectedMistakeTypes.has(el.dataset.val));
+  });
+}
+function syncStatusToggleUI(){
+  $all('.status-opt').forEach(el=>{
+    el.classList.toggle('sel', el.dataset.status === selectedStatus);
+  });
+}
+
+$('#subjectPicker').addEventListener('click', (e)=>{
+  const opt = e.target.closest('.subject-opt');
+  if(!opt) return;
+  selectedSubject = opt.dataset.subject;
+  syncSubjectPickerUI();
+});
+$('#mistakeChips').addEventListener('click', (e)=>{
+  const chip = e.target.closest('.chip-toggle');
+  if(!chip) return;
+  const v = chip.dataset.val;
+  if(selectedMistakeTypes.has(v)) selectedMistakeTypes.delete(v); else selectedMistakeTypes.add(v);
+  syncMistakeChipsUI();
+});
+$('#statusToggle').addEventListener('click', (e)=>{
+  const opt = e.target.closest('.status-opt');
+  if(!opt) return;
+  selectedStatus = opt.dataset.status;
+  syncStatusToggleUI();
+});
+
+$('#qCameraBtn').onclick = ()=> $('#qCameraInput').click();
+$('#qGalleryBtn').onclick = ()=> $('#qGalleryInput').click();
+$('#sCameraBtn').onclick = ()=> $('#sCameraInput').click();
+$('#sGalleryBtn').onclick = ()=> $('#sGalleryInput').click();
+$('#qCameraInput').onchange = (e)=>{ handleFileInput('q', e.target.files); e.target.value=''; };
+$('#qGalleryInput').onchange = (e)=>{ handleFileInput('q', e.target.files); e.target.value=''; };
+$('#sCameraInput').onchange = (e)=>{ handleFileInput('s', e.target.files); e.target.value=''; };
+$('#sGalleryInput').onchange = (e)=>{ handleFileInput('s', e.target.files); e.target.value=''; };
+function handleFileInput(kind, fileList){
+  Array.from(fileList).forEach(f=>{ if(f.type.startsWith('image/')) addDraftPhoto(kind, f); });
+}
+
+/* ---- voice recording ---- */
+$('#recBtn').onclick = async ()=>{
+  if(state.recording.active){
+    stopRecording();
+  } else {
+    await startRecording();
+  }
+};
+$('#recDeleteBtn').onclick = ()=>{
+  state.recording.blob = null;
+  state.recording.isNew = false;
+  $('#recAudioPreview').style.display = 'none';
+  $('#recAudioPreview').src = '';
+  $('#recDeleteBtn').style.display = 'none';
+  $('#recInfo').textContent = 'Tap to record a voice note';
+};
+
+async function startRecording(){
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const mime = pickRecorderMime();
+    const mr = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+    state.recording.chunks = [];
+    state.recording.mediaRecorder = mr;
+    state.recording.mimeType = mime || 'audio/webm';
+    mr.ondataavailable = (e)=>{ if(e.data && e.data.size) state.recording.chunks.push(e.data); };
+    mr.onstop = ()=>{
+      const blob = new Blob(state.recording.chunks, { type: state.recording.mimeType });
+      state.recording.blob = blob;
+      state.recording.isNew = true;
+      $('#recAudioPreview').src = URL.createObjectURL(blob);
+      $('#recAudioPreview').style.display = 'block';
+      $('#recDeleteBtn').style.display = 'inline-flex';
+      stream.getTracks().forEach(t=>t.stop());
+    };
+    mr.start();
+    state.recording.active = true;
+    state.recording.startedAt = Date.now();
+    $('#recBtn').classList.add('recording');
+    $('#recInfo').innerHTML = 'Recording… <span class="rec-time" id="recTimeSpan">0:00</span>';
+    state.recording.timerId = setInterval(()=>{
+      const secs = Math.floor((Date.now() - state.recording.startedAt)/1000);
+      const m = Math.floor(secs/60), s = secs%60;
+      const el = document.getElementById('recTimeSpan');
+      if(el) el.textContent = m+':' + String(s).padStart(2,'0');
+    }, 300);
+  }catch(err){
+    console.error(err);
+    toast('Microphone permission denied');
+  }
+}
+function stopRecording(){
+  if(state.recording.mediaRecorder && state.recording.mediaRecorder.state !== 'inactive'){
+    state.recording.mediaRecorder.stop();
+  }
+  state.recording.active = false;
+  clearInterval(state.recording.timerId);
+  $('#recBtn').classList.remove('recording');
+  $('#recInfo').textContent = 'Voice note attached';
+}
+
+/* ---- save entry ---- */
+$('#entrySaveBtn').onclick = saveEntry;
+$('#entryCancelBtn').onclick = ()=> hideOverlay('#entryOverlay');
+$('#entryCloseBtn').onclick = ()=> hideOverlay('#entryOverlay');
+
+async function saveEntry(){
+  if(!selectedSubject){ toast('Pick a subject'); return; }
+  if(!$('#chapterInput').value.trim()){ toast('Add a chapter or topic'); return; }
+  if(state.draftPhotos.q.length === 0){ toast('Add at least one question photo'); return; }
+
+  $('#entrySaveBtn').disabled = true;
+  $('#entrySaveBtn').textContent = 'Saving…';
+
+  try{
+    const isEdit = !!state.editingId;
+    const id = state.editingId || uid();
+    const existing = isEdit ? state.entries.find(e=>e.id===id) : null;
+
+    // Persist photo blobs to IndexedDB, building fresh reference lists.
+    const qPhotos = await persistPhotoList('q', id, existing ? existing.qPhotos : []);
+    const sPhotos = await persistPhotoList('s', id, existing ? existing.sPhotos : []);
+
+    let voice = existing ? existing.voice : null;
+    if(state.recording.blob && state.recording.isNew){
+      // A new (or re-recorded) voice note — upload as a fresh file, retire the old one.
+      const key = id + '_voice';
+      await idbSetBlob(key, state.recording.blob, state.recording.mimeType);
+      if(existing && existing.voice){
+        if(existing.voice.key && existing.voice.key !== key) await idbDeleteBlob(existing.voice.key);
+        if(existing.voice.driveId) deleteDriveFile(existing.voice.driveId);
+      }
+      voice = { key, driveId: null, mime: state.recording.mimeType };
+    } else if(!state.recording.blob){
+      // Voice note was removed (or never existed).
+      if(existing && existing.voice){
+        if(existing.voice.key) await idbDeleteBlob(existing.voice.key);
+        if(existing.voice.driveId) deleteDriveFile(existing.voice.driveId);
+      }
+      voice = null;
+    }
+    // else: an untouched pre-existing recording — keep `voice` as-is (including its driveId).
+
+    const entry = {
+      id,
+      createdAt: existing ? existing.createdAt : nowIso(),
+      updatedAt: nowIso(),
+      subject: selectedSubject,
+      chapter: $('#chapterInput').value.trim(),
+      source: $('#sourceInput').value.trim(),
+      mistakeTypes: Array.from(selectedMistakeTypes),
+      note: $('#noteInput').value.trim(),
+      status: selectedStatus,
+      qPhotos, sPhotos, voice,
+      pendingUpload: true,
+      remoteOnly: false
+    };
+
+    if(isEdit){
+      const idx = state.entries.findIndex(e=>e.id===id);
+      state.entries[idx] = entry;
+    } else {
+      state.entries.unshift(entry);
+    }
+    persistEntries();
+    renderGrid();
+    hideOverlay('#entryOverlay');
+    toast(isEdit ? 'Entry updated' : 'Entry saved');
+    maybeSync();
+  }catch(err){
+    console.error(err);
+    toast('Something went wrong saving this entry');
+  }finally{
+    $('#entrySaveBtn').disabled = false;
+    $('#entrySaveBtn').textContent = 'Save entry';
+  }
+}
+
+async function persistPhotoList(kind, entryId, previousRefs){
+  const drafts = state.draftPhotos[kind];
+  const result = [];
+  for(let i=0;i<drafts.length;i++){
+    const d = drafts[i];
+    const key = entryId + '_' + kind + i;
+    await idbSetBlob(key, d.blob, 'image/jpeg');
+    const thumbBlob = await compressImage(d.blob, 320, 0.6);
+    const thumbKey = key + '_thumb';
+    await idbSetBlob(thumbKey, thumbBlob, 'image/jpeg');
+    const prevRef = d.existingRef;
+    result.push({ key, thumbKey, driveId: prevRef ? prevRef.driveId : null });
+  }
+  // clean up any leftover blobs from a shrunk list on edit
+  if(previousRefs){
+    for(let i=drafts.length; i<previousRefs.length; i++){
+      const stale = entryId + '_' + kind + i;
+      await idbDeleteBlob(stale);
+      await idbDeleteBlob(stale + '_thumb');
+    }
+  }
+  return result;
+}
+
+/* ============================================================
+   VIEW MODAL
+============================================================ */
+function openViewModal(entry){
+  state.viewingId = entry.id;
+  $('#viewChapter').textContent = entry.chapter;
+  const meta = $('#viewMetaRow');
+  meta.innerHTML = `
+    <span class="entry-subject-tag" style="position:static;--tag-c:${SUBJECTS[entry.subject].color}">${SUBJECTS[entry.subject].label}</span>
+    ${entry.source ? `<span class="mini-chip">${esc(entry.source)}</span>` : ''}
+    ${entry.mistakeTypes.map(m=>`<span class="mini-chip">${esc(m)}</span>`).join('')}
+    <span class="mini-chip">${new Date(entry.createdAt).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'})}</span>
+  `;
+
+  renderLightbox('#viewQPhotos', entry.qPhotos);
+  const sBlock = $('#viewSolutionBlock');
+  if(entry.sPhotos.length){ sBlock.style.display=''; renderLightbox('#viewSPhotos', entry.sPhotos); }
+  else sBlock.style.display = 'none';
+
+  const noteBlock = $('#viewNoteBlock');
+  if(entry.note){ noteBlock.style.display=''; $('#viewNoteText').textContent = entry.note; }
+  else noteBlock.style.display = 'none';
+
+  const voiceBlock = $('#viewVoiceBlock');
+  if(entry.voice){
+    voiceBlock.style.display = '';
+    resolveVoiceUrl(entry.voice).then(url=>{ if(url) $('#viewAudio').src = url; });
+  } else voiceBlock.style.display = 'none';
+
+  $('#viewToggleStatusBtn').textContent = entry.status === 'revision' ? 'Mark as mastered' : 'Mark as needs revision';
+  showOverlay('#viewOverlay');
+}
+
+async function resolveVoiceUrl(voice){
+  if(voice.key){ return blobKeyToUrl(voice.key); }
+  if(voice.driveId && isDriveReady()){
+    try{
+      const blob = await downloadDriveBlob(voice.driveId);
+      return URL.createObjectURL(blob);
+    }catch(e){ console.error(e); return null; }
+  }
+  return null;
+}
+
+async function renderLightbox(sel, photos){
+  const strip = $(sel);
+  strip.innerHTML = '';
+  for(const p of photos){
+    const img = document.createElement('img');
+    img.alt = 'photo';
+    strip.appendChild(img);
+    let url = p.key ? await blobKeyToUrl(p.key) : null;
+    if(!url && p.driveId && isDriveReady()){
+      try{
+        const blob = await downloadDriveBlob(p.driveId);
+        url = URL.createObjectURL(blob);
+        objectUrlCache.set(p.driveId, url);
+      }catch(e){ console.error(e); }
+    }
+    img.src = url || '';
+  }
+}
+
+$('#viewCloseBtn').onclick = ()=> hideOverlay('#viewOverlay');
+$('#viewEditBtn').onclick = ()=>{
+  const entry = state.entries.find(e=>e.id===state.viewingId);
+  hideOverlay('#viewOverlay');
+  openEntryModal(entry);
+};
+$('#viewToggleStatusBtn').onclick = ()=>{
+  const entry = state.entries.find(e=>e.id===state.viewingId);
+  entry.status = entry.status === 'revision' ? 'mastered' : 'revision';
+  entry.updatedAt = nowIso();
+  entry.pendingUpload = true;
+  persistEntries();
+  renderGrid();
+  hideOverlay('#viewOverlay');
+  toast(entry.status === 'mastered' ? 'Marked as mastered' : 'Marked as needs revision');
+  maybeSync();
+};
+$('#viewDeleteBtn').onclick = ()=>{
+  const entry = state.entries.find(e=>e.id===state.viewingId);
+  openConfirm('Delete this entry?', 'The photos and voice note will be removed from this device and from Drive.', async ()=>{
+    await deleteEntry(entry);
+    hideOverlay('#viewOverlay');
+  });
+};
+
+async function deleteEntry(entry){
+  for(const p of [...entry.qPhotos, ...entry.sPhotos]){
+    if(p.key){ await idbDeleteBlob(p.key); await idbDeleteBlob(p.thumbKey); }
+    if(p.driveId && isDriveReady()) deleteDriveFile(p.driveId);
+  }
+  if(entry.voice){
+    if(entry.voice.key) await idbDeleteBlob(entry.voice.key);
+    if(entry.voice.driveId && isDriveReady()) deleteDriveFile(entry.voice.driveId);
+  }
+  state.entries = state.entries.filter(e=>e.id!==entry.id);
+  tombstones.add(entry.id);
+  persistTombstones();
+  persistEntries();
+  renderGrid();
+  toast('Entry deleted');
+  maybeSync();
+}
+
+/* ============================================================
+   GRID RENDERING
+============================================================ */
+function getFilteredEntries(){
+  let list = state.entries.slice();
+  if(state.filterSubject !== 'ALL') list = list.filter(e=>e.subject===state.filterSubject);
+  if(state.filterStatus !== 'ALL') list = list.filter(e=>e.status===state.filterStatus);
+  if(state.searchQuery){
+    const q = state.searchQuery.toLowerCase();
+    list = list.filter(e =>
+      (e.chapter||'').toLowerCase().includes(q) ||
+      (e.source||'').toLowerCase().includes(q) ||
+      (e.note||'').toLowerCase().includes(q)
+    );
+  }
+  if(state.filterSort === 'new') list.sort((a,b)=> new Date(b.createdAt)-new Date(a.createdAt));
+  else if(state.filterSort === 'old') list.sort((a,b)=> new Date(a.createdAt)-new Date(b.createdAt));
+  else if(state.filterSort === 'subject') list.sort((a,b)=> a.subject.localeCompare(b.subject) || new Date(b.createdAt)-new Date(a.createdAt));
+  return list;
+}
+
+let gridObserver = null;
+function renderGrid(){
+  const grid = $('#entriesGrid');
+  const list = getFilteredEntries();
+  grid.innerHTML = '';
+
+  if(list.length === 0){
+    grid.innerHTML = `<div class="empty-state">
+      <svg width="52" height="52" viewBox="0 0 24 24" fill="none"><path d="M5 4.5A2.5 2.5 0 0 1 7.5 2H18a1 1 0 0 1 1 1v17a1 1 0 0 1-1 1H7.5A2.5 2.5 0 0 1 5 18.5v-14Z" stroke="currentColor" stroke-width="1.5"/><path d="M9 8h6M9 12h6M9 16h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      <b>${state.entries.length===0 ? 'No mistakes logged yet' : 'Nothing matches those filters'}</b>
+      <span>${state.entries.length===0 ? 'Tap the + button to snap your first question.' : 'Try a different subject or search term.'}</span>
+    </div>`;
+    return;
+  }
+
+  if(gridObserver) gridObserver.disconnect();
+  gridObserver = new IntersectionObserver(onCardVisible, { rootMargin: '200px' });
+
+  list.forEach(entry=>{
+    const card = document.createElement('div');
+    card.className = 'entry-card glass';
+    card.dataset.id = entry.id;
+    const firstPhoto = entry.qPhotos[0];
+    card.innerHTML = `
+      <span class="entry-thumb-holder">${firstPhoto ? '' : ''}</span>
+      <span class="entry-subject-tag" style="--tag-c:${SUBJECTS[entry.subject].color}">${SUBJECTS[entry.subject].label}</span>
+      <span class="entry-status-dot ${entry.status}"></span>
+      ${entry.pendingUpload ? '<span class="pending-badge" title="Not yet synced to Drive">⏳</span>' : ''}
+      <div class="entry-body">
+        <div class="entry-chapter">${esc(entry.chapter)}</div>
+        <div class="entry-meta">
+          <span>${new Date(entry.createdAt).toLocaleDateString(undefined,{day:'numeric',month:'short'})}</span>
+          ${entry.source ? `<span>· ${esc(entry.source)}</span>` : ''}
+        </div>
+        ${entry.mistakeTypes.length ? `<div class="entry-chips">${entry.mistakeTypes.slice(0,2).map(m=>`<span class="mini-chip">${esc(m)}</span>`).join('')}</div>` : ''}
+        ${entry.note ? `<div class="entry-note-preview">${esc(entry.note)}</div>` : ''}
+      </div>
+    `;
+    const holder = card.querySelector('.entry-thumb-holder');
+    const placeholder = document.createElement('div');
+    placeholder.className = 'entry-thumb-placeholder';
+    placeholder.innerHTML = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M4 16.5 8.5 12l3 3L17 9.5 20 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><rect x="3" y="4" width="18" height="16" rx="2.5" stroke="currentColor" stroke-width="1.6"/></svg>';
+    holder.replaceWith(placeholder);
+    card.insertBefore(placeholder, card.firstChild);
+
+    card.onclick = ()=> openViewModal(entry);
+    grid.appendChild(card);
+    gridObserver.observe(card);
+  });
+}
+
+async function onCardVisible(entriesObs){
+  for(const obs of entriesObs){
+    if(!obs.isIntersecting) continue;
+    gridObserver.unobserve(obs.target);
+    const id = obs.target.dataset.id;
+    const entry = state.entries.find(e=>e.id===id);
+    if(!entry) continue;
+    const photo = entry.qPhotos[0];
+    if(!photo) continue;
+    let url = photo.thumbKey ? await blobKeyToUrl(photo.thumbKey) : (photo.key ? await blobKeyToUrl(photo.key) : null);
+    if(!url && photo.driveId && isDriveReady()){
+      try{
+        const blob = await downloadDriveBlob(photo.driveId);
+        const thumb = await compressImage(blob, 320, 0.6);
+        const thumbKey = entry.id + '_q0_thumb_r';
+        await idbSetBlob(thumbKey, thumb, 'image/jpeg');
+        photo.thumbKey = thumbKey;
+        persistEntries();
+        url = URL.createObjectURL(thumb);
+      }catch(e){ console.error(e); }
+    }
+    if(url){
+      const holder = obs.target.querySelector('.entry-thumb-placeholder');
+      if(holder){
+        const img = document.createElement('img');
+        img.className = 'entry-thumb';
+        img.src = url;
+        img.loading = 'lazy';
+        holder.replaceWith(img);
+      }
+    }
+  }
+}
+
+/* ============================================================
+   FILTER / SEARCH EVENTS
+============================================================ */
+function positionTabThumb(){
+  const active = document.querySelector('#subjectTabs .tab.active');
+  const thumb = $('#tabThumb');
+  if(!active || !thumb) return;
+  thumb.style.width = active.offsetWidth + 'px';
+  thumb.style.transform = 'translateX(' + active.offsetLeft + 'px)';
+}
+$('#subjectTabs').addEventListener('click', (e)=>{
+  const tab = e.target.closest('.tab');
+  if(!tab) return;
+  $all('.tab').forEach(t=>t.classList.remove('active'));
+  tab.classList.add('active');
+  positionTabThumb();
+  state.filterSubject = tab.dataset.subject;
+  renderGrid();
+});
+window.addEventListener('resize', positionTabThumb);
+window.addEventListener('load', positionTabThumb);
+setTimeout(positionTabThumb, 0);
+function setupDropdown(containerId, onSelect){
+  const container = $('#'+containerId);
+  const btn = container.querySelector('.pill-select-btn');
+  const menu = container.querySelector('.dropdown-menu');
+  const label = btn.querySelector('.dd-label');
+  btn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    const willOpen = !container.classList.contains('open');
+    closeAllDropdowns();
+    if(willOpen) container.classList.add('open');
+  });
+  menu.addEventListener('click', (e)=>{
+    const item = e.target.closest('.dropdown-item');
+    if(!item) return;
+    Array.from(menu.children).forEach(c=>c.classList.remove('sel'));
+    item.classList.add('sel');
+    label.textContent = item.textContent;
+    container.classList.remove('open');
+    onSelect(item.dataset.value);
+  });
+}
+function closeAllDropdowns(){ $all('.dropdown.open').forEach(d=>d.classList.remove('open')); }
+document.addEventListener('click', closeAllDropdowns);
+document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeAllDropdowns(); });
+setupDropdown('statusDropdown', (val)=>{ state.filterStatus = val; renderGrid(); });
+setupDropdown('sortDropdown', (val)=>{ state.filterSort = val; renderGrid(); });
+let searchDebounce;
+$('#searchInput').oninput = (e)=>{
+  clearTimeout(searchDebounce);
+  searchDebounce = setTimeout(()=>{ state.searchQuery = e.target.value.trim(); renderGrid(); }, 180);
+};
+
+/* ============================================================
+   OVERLAYS
+============================================================ */
+function showOverlay(sel){ $(sel).classList.add('show'); }
+function hideOverlay(sel){ $(sel).classList.remove('show'); }
+$all('.overlay').forEach(ov=>{
+  ov.addEventListener('click', (e)=>{ if(e.target === ov) hideOverlay('#'+ov.id); });
+});
+
+$('#fabAdd').onclick = ()=> openEntryModal(null);
+
+/* ============================================================
+   CONFIRM MODAL
+============================================================ */
+function openConfirm(title, body, onOk){
+  $('#confirmTitle').textContent = title;
+  $('#confirmBody').textContent = body;
+  state.confirmAction = onOk;
+  showOverlay('#confirmOverlay');
+}
+$('#confirmCancelBtn').onclick = ()=> hideOverlay('#confirmOverlay');
+$('#confirmOkBtn').onclick = async ()=>{
+  const fn = state.confirmAction;
+  hideOverlay('#confirmOverlay');
+  if(fn) await fn();
+};
+
+/* ============================================================
+   THEME
+============================================================ */
+function applyTheme(){
+  let effective = settings.theme;
+  if(effective === 'system'){
+    effective = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  document.documentElement.setAttribute('data-theme', effective);
+  $all('.theme-opt').forEach(el=> el.classList.toggle('sel', el.dataset.theme===settings.theme));
+}
+$('#themeBtn').onclick = ()=>{
+  settings.theme = settings.theme === 'dark' ? 'light' : (settings.theme==='light' ? 'system':'dark');
+  saveSettings(); applyTheme();
+  toast('Theme: ' + settings.theme);
+};
+$('#themeRow').addEventListener('click', (e)=>{
+  const opt = e.target.closest('.theme-opt');
+  if(!opt) return;
+  settings.theme = opt.dataset.theme;
+  saveSettings(); applyTheme();
+});
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', ()=>{ if(settings.theme==='system') applyTheme(); });
+
+/* ============================================================
+   SETTINGS MODAL
+============================================================ */
+$('#settingsBtn').onclick = ()=>{
+  $('#clientIdInput').value = settings.clientId || '';
+  showSetupForm = false;
+  refreshDriveSettingsUI();
+  showOverlay('#settingsOverlay');
+};
+$('#settingsCloseBtn').onclick = ()=> hideOverlay('#settingsOverlay');
+
+let showSetupForm = false;
+
+function refreshDriveSettingsUI(){
+  const connected = isDriveReady() && !!accessToken;
+  const hasId = isDriveReady() && !showSetupForm;
+  $('#driveConnectedBlock').style.display = connected ? '' : 'none';
+  $('#driveSignInBlock').style.display = (!connected && hasId) ? '' : 'none';
+  $('#driveDisconnectedBlock').style.display = (!connected && !hasId) ? '' : 'none';
+  $('#lastSyncText').textContent = settings.lastSync ? new Date(settings.lastSync).toLocaleString() : 'Never';
+  updateSigninBanner();
+}
+
+function updateSigninBanner(){
+  const dismissed = localStorage.getItem('mn_signin_banner_dismissed') === '1';
+  const shouldShow = isDriveReady() && !accessToken && !dismissed;
+  $('#signinBanner').style.display = shouldShow ? '' : 'none';
+}
+
+async function doGoogleSignIn(){
+  try{
+    await initDrive(settings.clientId);
+    await requestToken('consent');
+    toast('Signed in to Google Drive');
+    refreshDriveSettingsUI();
+    await syncWithDrive();
+  }catch(err){
+    console.error(err);
+    toast('Sign-in failed — check the Client ID and authorized origin');
+  }
+}
+
+$('#connectDriveBtn').onclick = async ()=>{
+  const id = $('#clientIdInput').value.trim();
+  if(!id){ toast('Paste your Client ID first'); return; }
+  settings.clientId = id; saveSettings();
+  showSetupForm = false;
+  await doGoogleSignIn();
+};
+$('#googleSignInBtn').onclick = doGoogleSignIn;
+$('#bannerSignInBtn').onclick = doGoogleSignIn;
+$('#bannerCloseBtn').onclick = ()=>{
+  localStorage.setItem('mn_signin_banner_dismissed', '1');
+  updateSigninBanner();
+};
+$('#editClientIdBtn').onclick = ()=>{
+  showSetupForm = true;
+  $('#clientIdInput').value = settings.clientId || '';
+  refreshDriveSettingsUI();
+};
+$('#disconnectDriveBtn').onclick = ()=>{
+  accessToken = null; tokenExpiry = 0; gisTokenClient = null;
+  refreshDriveSettingsUI();
+  updateSyncPill('local');
+  toast('Signed out of Google Drive');
+};
+$('#syncNowBtn').onclick = ()=> syncWithDrive();
+
+/* ---- backup export / import ---- */
+$('#exportBackupBtn').onclick = async ()=>{
+  toast('Preparing backup…');
+  try{
+    const keys = await idbGetAllKeys();
+    const blobs = {};
+    for(const k of keys){
+      const rec = await idbGetBlob(k);
+      if(rec) blobs[k] = { mime: rec.mime, data: await blobToBase64(rec.blob) };
+    }
+    const payload = { exportedAt: nowIso(), entries: state.entries, blobs };
+    const blob = new Blob([JSON.stringify(payload)], { type:'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'mistake-notebook-backup-' + new Date().toISOString().slice(0,10) + '.json';
+    a.click();
+    toast('Backup downloaded');
+  }catch(err){ console.error(err); toast('Backup failed'); }
+};
+function blobToBase64(blob){
+  return new Promise((res,rej)=>{
+    const r = new FileReader();
+    r.onload = ()=> res(r.result);
+    r.onerror = rej;
+    r.readAsDataURL(blob);
+  });
+}
+function base64ToBlob(dataUrl, mime){
+  return fetch(dataUrl).then(r=>r.blob());
+}
+$('#importBackupBtn').onclick = ()=> $('#importBackupInput').click();
+$('#importBackupInput').onchange = async (e)=>{
+  const file = e.target.files[0];
+  e.target.value = '';
+  if(!file) return;
+  try{
+    const text = await file.text();
+    const payload = JSON.parse(text);
+    for(const key of Object.keys(payload.blobs||{})){
+      const b = payload.blobs[key];
+      const blob = await base64ToBlob(b.data, b.mime);
+      await idbSetBlob(key, blob, b.mime);
+    }
+    const existingIds = new Set(state.entries.map(e=>e.id));
+    (payload.entries||[]).forEach(e=>{ if(!existingIds.has(e.id)) state.entries.push(e); });
+    persistEntries();
+    renderGrid();
+    toast('Backup imported');
+  }catch(err){ console.error(err); toast('Could not read that backup file'); }
+};
+
+$('#clearAllBtn').onclick = ()=>{
+  openConfirm('Delete all local data?', 'This removes every entry and photo from this device. If Drive is connected, your Drive copy is untouched.', async ()=>{
+    state.entries = [];
+    persistEntries();
+    const keys = await idbGetAllKeys();
+    for(const k of keys) await idbDeleteBlob(k);
+    renderGrid();
+    toast('Local data cleared');
+  });
+};
+
+/* ============================================================
+   GOOGLE DRIVE
+============================================================ */
+let gisTokenClient = null;
+let accessToken = null;
+let tokenExpiry = 0;
+let driveFolderId = null;
+let driveIndexFileId = null;
+let syncInFlight = false;
+
+function isDriveReady(){ return !!settings.clientId; }
+
+function loadGIS(){
+  return new Promise((resolve, reject)=>{
+    if(window.google && window.google.accounts && window.google.accounts.oauth2){ resolve(); return; }
+    const s = document.createElement('script');
+    s.src = 'https://accounts.google.com/gsi/client';
+    s.async = true; s.defer = true;
+    s.onload = ()=>resolve();
+    s.onerror = ()=>reject(new Error('Could not load Google Identity Services'));
+    document.head.appendChild(s);
+  });
+}
+
+async function initDrive(clientId){
+  await loadGIS();
+  gisTokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: clientId,
+    scope: DRIVE_SCOPE,
+    callback: ()=>{}
+  });
+}
+
+function requestToken(promptType){
+  return new Promise((resolve, reject)=>{
+    if(!gisTokenClient){ reject(new Error('Drive not initialized')); return; }
+    gisTokenClient.callback = (resp)=>{
+      if(resp.error){ reject(resp); return; }
+      accessToken = resp.access_token;
+      tokenExpiry = Date.now() + (resp.expires_in*1000 - 60000);
+      resolve(accessToken);
+    };
+    gisTokenClient.requestAccessToken({ prompt: promptType || '' });
+  });
+}
+
+async function ensureToken(){
+  if(accessToken && Date.now() < tokenExpiry) return accessToken;
+  if(!gisTokenClient) await initDrive(settings.clientId);
+  return requestToken('');
+}
+
+async function driveFetch(url, options){
+  options = options || {};
+  const token = await ensureToken();
+  const headers = Object.assign({}, options.headers, { Authorization: 'Bearer ' + token });
+  const res = await fetch(url, Object.assign({}, options, { headers }));
+  if(!res.ok){
+    const text = await res.text().catch(()=> '');
+    throw new Error('Drive API ' + res.status + ': ' + text);
+  }
+  return res;
+}
+
+function buildMultipartBody(boundary, metadata, dataPart, dataMimeType){
+  const metaPart = `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n`;
+  const mediaHeader = `--${boundary}\r\nContent-Type: ${dataMimeType}\r\n\r\n`;
+  const closeDelim = `\r\n--${boundary}--`;
+  if(typeof dataPart === 'string') return metaPart + mediaHeader + dataPart + closeDelim;
+  return new Blob([metaPart, mediaHeader, dataPart, closeDelim]);
+}
+
+async function findOrCreateFolder(){
+  if(driveFolderId) return driveFolderId;
+  const q = encodeURIComponent(`name='${DRIVE_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+  const res = await driveFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`);
+  const data = await res.json();
+  if(data.files && data.files.length){ driveFolderId = data.files[0].id; return driveFolderId; }
+  const boundary = 'mnb' + Date.now();
+  const body = buildMultipartBody(boundary, { name: DRIVE_FOLDER_NAME, mimeType:'application/vnd.google-apps.folder' }, '{}', 'application/json');
+  const createRes = await driveFetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+    method:'POST', headers:{'Content-Type':`multipart/related; boundary=${boundary}`}, body
+  });
+  const folder = await createRes.json();
+  driveFolderId = folder.id;
+  return driveFolderId;
+}
+
+async function getOrCreateIndexFile(){
+  if(driveIndexFileId) return driveIndexFileId;
+  const folderId = await findOrCreateFolder();
+  const q = encodeURIComponent(`name='index.json' and '${folderId}' in parents and trashed=false`);
+  const res = await driveFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`);
+  const data = await res.json();
+  if(data.files && data.files.length){ driveIndexFileId = data.files[0].id; return driveIndexFileId; }
+  const boundary = 'mnb' + Date.now();
+  const body = buildMultipartBody(boundary, { name:'index.json', parents:[folderId], mimeType:'application/json' }, JSON.stringify({entries:[]}), 'application/json');
+  const createRes = await driveFetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+    method:'POST', headers:{'Content-Type':`multipart/related; boundary=${boundary}`}, body
+  });
+  const file = await createRes.json();
+  driveIndexFileId = file.id;
+  return driveIndexFileId;
+}
+
+async function fetchRemoteIndex(){
+  const fileId = await getOrCreateIndexFile();
+  const res = await driveFetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
+  try{ return await res.json(); }catch(e){ return { entries: [] }; }
+}
+async function pushRemoteIndex(obj){
+  const fileId = await getOrCreateIndexFile();
+  await driveFetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
+    method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify(obj)
+  });
+}
+async function uploadMediaBlob(name, blob, mime, folderId){
+  const boundary = 'mnb' + Date.now() + Math.random().toString(36).slice(2);
+  const body = buildMultipartBody(boundary, { name, parents:[folderId] }, blob, mime);
+  const res = await driveFetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+    method:'POST', headers:{'Content-Type':`multipart/related; boundary=${boundary}`}, body
+  });
+  const file = await res.json();
+  return file.id;
+}
+async function downloadDriveBlob(fileId){
+  const res = await driveFetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
+  return res.blob();
+}
+async function deleteDriveFile(fileId){
+  try{ await driveFetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, { method:'DELETE' }); }catch(e){ /* ignore */ }
+}
+
+function updateSyncPill(mode){
+  const pill = $('#syncPill');
+  pill.className = 'sync-pill ' + mode;
+  const labels = { local:'Local only', syncing:'Syncing…', synced:'Synced', error:'Sync error' };
+  $('#syncPillText').textContent = labels[mode] || mode;
+}
+
+function maybeSync(){
+  if(isDriveReady() && navigator.onLine) syncWithDrive();
+}
+
+async function syncWithDrive(){
+  if(!isDriveReady() || syncInFlight) return;
+  syncInFlight = true;
+  updateSyncPill('syncing');
+  try{
+    const folderId = await findOrCreateFolder();
+    const remote = await fetchRemoteIndex();
+    const remoteEntries = remote.entries || [];
+    const remoteById = new Map(remoteEntries.map(e=>[e.id, e]));
+    const localById = new Map(state.entries.map(e=>[e.id, e]));
+
+    // Pull: remote entries we don't know about locally yet (skip anything we've deleted here)
+    for(const [id, rEntry] of remoteById){
+      if(!localById.has(id)){
+        if(tombstones.has(id)) continue;
+        state.entries.push(Object.assign({}, rEntry, { pendingUpload:false, remoteOnly:true }));
+      } else {
+        const lEntry = localById.get(id);
+        if(new Date(rEntry.updatedAt) > new Date(lEntry.updatedAt) && !lEntry.pendingUpload){
+          Object.assign(lEntry, rEntry, { pendingUpload:false });
+        }
+      }
+    }
+
+    // Push: local entries pending upload
+    for(const entry of state.entries){
+      if(entry.pendingUpload){
+        await pushEntryMedia(entry, folderId);
+        entry.pendingUpload = false;
+      }
+    }
+
+    // Handle local deletions vs remote: entries remote has but local removed are simply
+    // not re-added because we only pull entries missing from local on this pass while
+    // local already contains full history; deletions are pushed immediately at delete time.
+
+    const finalIndex = { entries: state.entries.map(stripLocalFields) };
+    await pushRemoteIndex(finalIndex);
+
+    persistEntries();
+    renderGrid();
+    settings.lastSync = nowIso();
+    saveSettings();
+    refreshDriveSettingsUI();
+    updateSyncPill('synced');
+  }catch(err){
+    console.error(err);
+    updateSyncPill('error');
+  }finally{
+    syncInFlight = false;
+  }
+}
+
+function stripLocalFields(entry){
+  const clone = JSON.parse(JSON.stringify(entry));
+  delete clone.pendingUpload;
+  delete clone.remoteOnly;
+  const stripPhoto = p => ({ driveId: p.driveId });
+  clone.qPhotos = entry.qPhotos.map(stripPhoto);
+  clone.sPhotos = entry.sPhotos.map(stripPhoto);
+  clone.voice = entry.voice ? { driveId: entry.voice.driveId, mime: entry.voice.mime } : null;
+  return clone;
+}
+
+async function pushEntryMedia(entry, folderId){
+  for(const p of entry.qPhotos){
+    if(!p.driveId && p.key){
+      const rec = await idbGetBlob(p.key);
+      if(rec) p.driveId = await uploadMediaBlob(entry.id + '_q.jpg', rec.blob, 'image/jpeg', folderId);
+    }
+  }
+  for(const p of entry.sPhotos){
+    if(!p.driveId && p.key){
+      const rec = await idbGetBlob(p.key);
+      if(rec) p.driveId = await uploadMediaBlob(entry.id + '_s.jpg', rec.blob, 'image/jpeg', folderId);
+    }
+  }
+  if(entry.voice && !entry.voice.driveId && entry.voice.key){
+    const rec = await idbGetBlob(entry.voice.key);
+    if(rec) entry.voice.driveId = await uploadMediaBlob(entry.id + '_voice', rec.blob, entry.voice.mime || 'audio/webm', folderId);
+  }
+}
+
+window.addEventListener('online', ()=>{ if(isDriveReady()) syncWithDrive(); });
+
+/* ============================================================
+   INIT
+============================================================ */
+async function init(){
+  applyTheme();
+  state.entries = loadEntries();
+  renderGrid();
+
+  if(isDriveReady()){
+    try{
+      await initDrive(settings.clientId);
+      await ensureToken();
+      updateSyncPill('syncing');
+      await syncWithDrive();
+    }catch(err){
+      console.warn('Drive auto-connect needs a fresh sign-in click', err);
+      updateSyncPill('local');
+    }
+  }
+  refreshDriveSettingsUI();
+}
+init();
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{ /* offline caching unavailable, app still works fine */ });
+  });
+}
+
+})();
+</script>
+</body>
+</html>
