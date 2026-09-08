@@ -95,6 +95,7 @@
     -webkit-font-smoothing:antialiased;
     transition: background-color .35s ease, color .35s ease;
     overscroll-behavior-y: contain;
+    overflow-x: hidden;
     letter-spacing: -0.006em;
   }
   button{font-family:inherit;}
@@ -233,6 +234,9 @@
     transition: opacity .16s ease, transform .18s cubic-bezier(.2,.9,.25,1);
   }
   .dropdown.open .dropdown-menu{ opacity:1; transform: translateY(0) scale(1); pointer-events:auto; }
+  /* The first (leftmost) dropdown opens toward the right instead of the left,
+     so its menu can't run off the edge of narrow screens. */
+  #statusDropdown .dropdown-menu{ left:0; right:auto; }
   .dropdown-item{
     padding:9px 12px; border-radius: var(--radius-sm); font-size:13px; font-weight:600;
     color: var(--ink-soft); cursor:pointer; white-space:nowrap;
@@ -478,10 +482,29 @@
   .confirm-modal{ max-width:340px; text-align:center; border-radius: var(--radius-xl) !important; }
   .confirm-modal p{ color: var(--ink-soft); font-size:13.5px; line-height:1.5; }
 
-  @media (max-width: 560px){
+  @media (max-width: 600px){
     #app{ padding: 12px 12px 110px; }
+
+    /* Topbar: wrap into two rows instead of squeezing everything into one
+       and overflowing — brand + status + icons on row 1, search on its own
+       full-width row 2. */
+    .topbar{ flex-wrap:wrap; row-gap:10px; padding:9px 12px; }
+    .search-wrap{ order:3; flex-basis:100%; }
     .brand-text span{ display:none; }
+    .sync-pill{ width:34px; height:34px; padding:0; justify-content:center; border-radius:50%; gap:0; }
+    .sync-pill span:not(.sync-dot){ display:none; }
+
+    /* Subject tabs scroll horizontally instead of wrapping/crushing together;
+       the status/sort dropdowns drop to their own full-width row below and
+       split evenly instead of fighting for space next to the tabs. */
+    .tabsbar{ flex-direction:column; align-items:stretch; gap:10px; flex-wrap:nowrap; }
+    .tabs{ overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; max-width:100%; }
+    .tabs::-webkit-scrollbar{ display:none; }
     .filter-row{ margin-left:0; width:100%; }
+    .dropdown{ flex:1; }
+    .pill-select-btn{ width:100%; justify-content:space-between; }
+
+    .modal-actions{ flex-wrap:wrap; }
   }
 </style>
 </head>
@@ -801,7 +824,7 @@ const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
 // has the steps), paste it here and re-upload the file. Every device that then opens this
 // page already has Drive ready — no need to paste the ID again on each device, just tap
 // "Connect Google Drive" and sign in. This ID is a public identifier, not a secret.
-const DEFAULT_CLIENT_ID = '87487097352-nep0kr5ci5i9kic2ih8tlmveslradq6p.apps.googleusercontent.com';
+const DEFAULT_CLIENT_ID = '';
 const LS_ENTRIES = 'mn_entries_v1';
 const LS_SETTINGS = 'mn_settings_v1';
 const LS_TOMBSTONES = 'mn_tombstones_v1';
@@ -933,8 +956,26 @@ async function blobKeyToUrl(key){
 /* ============================================================
    IMAGE / AUDIO HELPERS
 ============================================================ */
-function compressImage(fileOrBlob, maxDim, quality){
-  maxDim = maxDim || 1800; quality = quality || 0.85;
+function compressImageViaBitmap(fileOrBlob, maxDim, quality){
+  return new Promise(async (resolve, reject)=>{
+    try{
+      const bitmap = await createImageBitmap(fileOrBlob);
+      let w = bitmap.width, h = bitmap.height;
+      if(w > maxDim || h > maxDim){
+        if(w > h){ h = Math.round(h * maxDim / w); w = maxDim; }
+        else { w = Math.round(w * maxDim / h); h = maxDim; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(bitmap, 0, 0, w, h);
+      bitmap.close();
+      canvas.toBlob((blob)=>{ if(blob) resolve(blob); else reject(new Error('toBlob failed')); }, 'image/jpeg', quality);
+    }catch(err){ reject(err); }
+  });
+}
+
+function compressImageViaImgElement(fileOrBlob, maxDim, quality){
   return new Promise((resolve, reject)=>{
     const img = new Image();
     const url = URL.createObjectURL(fileOrBlob);
@@ -953,9 +994,25 @@ function compressImage(fileOrBlob, maxDim, quality){
         if(blob) resolve(blob); else reject(new Error('toBlob failed'));
       }, 'image/jpeg', quality);
     };
-    img.onerror = (e)=>{ URL.revokeObjectURL(url); reject(e); };
+    img.onerror = ()=>{ URL.revokeObjectURL(url); reject(new Error('Image element decode failed')); };
     img.src = url;
   });
+}
+
+// Tries the most robust decode path first (createImageBitmap handles far more
+// real-world phone-camera formats and huge photos than an <img> element does),
+// falls back to the classic <img>-based path, and as a last resort just uses
+// the original file untouched — so a format quirk never blocks the user from
+// adding their photo, it just skips compression for that one file.
+async function compressImage(fileOrBlob, maxDim, quality){
+  maxDim = maxDim || 1800; quality = quality || 0.85;
+  if(window.createImageBitmap){
+    try{ return await compressImageViaBitmap(fileOrBlob, maxDim, quality); }
+    catch(err){ console.warn('createImageBitmap decode failed, falling back', err); }
+  }
+  try{ return await compressImageViaImgElement(fileOrBlob, maxDim, quality); }
+  catch(err){ console.warn('Image element decode failed too, using original file as-is', err); }
+  return fileOrBlob;
 }
 
 function pickRecorderMime(){
@@ -977,7 +1034,7 @@ async function addDraftPhoto(kind, file){
     renderPhotoStrip(kind);
   }catch(err){
     console.error(err);
-    toast('Could not read that image');
+    toast('Could not add that photo — try a different one');
   }
 }
 function removeDraftPhoto(kind, tempKey){
