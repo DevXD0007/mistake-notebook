@@ -999,6 +999,42 @@ function compressImageViaImgElement(fileOrBlob, maxDim, quality){
   });
 }
 
+// HEIC/HEIF (the default photo format on iPhones, and some Android cameras)
+// isn't decodable by canvas/createImageBitmap in almost any browser — it's a
+// missing codec, not something a different JS API can route around. So this
+// converts it to a normal JPEG first, using a small library loaded on demand
+// (only when a HEIC file actually shows up).
+let heic2anyLoadPromise = null;
+function loadHeic2Any(){
+  if(window.heic2any) return Promise.resolve();
+  if(heic2anyLoadPromise) return heic2anyLoadPromise;
+  heic2anyLoadPromise = new Promise((resolve, reject)=>{
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js';
+    s.async = true;
+    s.onload = ()=> resolve();
+    s.onerror = ()=> reject(new Error('Could not load HEIC converter'));
+    document.head.appendChild(s);
+  });
+  return heic2anyLoadPromise;
+}
+function looksLikeHeic(fileOrBlob){
+  const type = (fileOrBlob.type || '').toLowerCase();
+  const name = (fileOrBlob.name || '').toLowerCase();
+  return type === 'image/heic' || type === 'image/heif' || name.endsWith('.heic') || name.endsWith('.heif');
+}
+async function maybeConvertHeic(fileOrBlob){
+  if(!looksLikeHeic(fileOrBlob)) return fileOrBlob;
+  try{
+    await loadHeic2Any();
+    const result = await window.heic2any({ blob: fileOrBlob, toType: 'image/jpeg', quality: 0.9 });
+    return Array.isArray(result) ? result[0] : result;
+  }catch(err){
+    console.warn('HEIC conversion failed, will try normal decode paths anyway', err);
+    return fileOrBlob;
+  }
+}
+
 // Tries the most robust decode path first (createImageBitmap handles far more
 // real-world phone-camera formats and huge photos than an <img> element does),
 // falls back to the classic <img>-based path, and as a last resort just uses
@@ -1006,6 +1042,7 @@ function compressImageViaImgElement(fileOrBlob, maxDim, quality){
 // adding their photo, it just skips compression for that one file.
 async function compressImage(fileOrBlob, maxDim, quality){
   maxDim = maxDim || 1800; quality = quality || 0.85;
+  fileOrBlob = await maybeConvertHeic(fileOrBlob);
   if(window.createImageBitmap){
     try{ return await compressImageViaBitmap(fileOrBlob, maxDim, quality); }
     catch(err){ console.warn('createImageBitmap decode failed, falling back', err); }
