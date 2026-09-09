@@ -448,7 +448,9 @@
 
   /* ---- view modal ---- */
   .lightbox-strip{ display:flex; gap:8px; overflow-x:auto; padding-bottom:6px; margin-bottom:6px; }
-  .lightbox-strip img{ height:280px; max-height:52vh; border-radius:18px; object-fit:contain; background: rgba(127,127,127,0.08); flex-shrink:0; }
+  .strip-item{ position:relative; flex-shrink:0; height:280px; max-height:52vh; }
+  .strip-item img, .strip-item video{ height:100%; max-height:52vh; border-radius:18px; object-fit:contain; background: rgba(127,127,127,0.08); display:block; }
+  .strip-item .lb-annot-view{ height:100%; max-height:52vh; width:auto; }
   .section-label{ font-size:11.5px; font-weight:650; color: var(--ink-faint); margin: 16px 0 8px; letter-spacing:0; }
   .view-note{ font-size:14.5px; line-height:1.6; white-space:pre-wrap; }
   .view-meta-row{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:10px; }
@@ -522,6 +524,49 @@
   }
   .lb-prev{ left:14px; } .lb-next{ right:14px; }
   .lb-nav.hidden{ display:none; }
+
+  /* ---- annotation: canvas, and a floating liquid-glass pen bar ---- */
+  .lb-annot-canvas{
+    position:absolute; z-index:5; touch-action:none; cursor:crosshair; display:none;
+    border-radius:12px;
+  }
+  .media-lightbox.annotating .lb-annot-canvas{ display:block; }
+  .media-lightbox.annotating .lb-nav, .media-lightbox.annotating .lb-counter{ opacity:0; pointer-events:none; }
+  .lb-annot-view{ position:absolute; inset:0; margin:auto; max-width:100%; max-height:100%; pointer-events:none; }
+
+  .lb-annot-bar{
+    position:absolute; left:50%; bottom:22px; transform:translateX(-50%) translateY(14px) scale(.95);
+    display:flex; align-items:center; gap:9px; padding:9px 12px; border-radius:999px;
+    background: rgba(28,30,42,0.5);
+    backdrop-filter: blur(28px) saturate(190%);
+    -webkit-backdrop-filter: blur(28px) saturate(190%);
+    border:1px solid rgba(255,255,255,0.16);
+    box-shadow: 0 1px 0 rgba(255,255,255,0.2) inset, 0 22px 46px -12px rgba(0,0,0,0.55);
+    opacity:0; pointer-events:none;
+    transition: opacity .22s ease, transform .26s cubic-bezier(.2,.9,.25,1);
+    z-index:20;
+  }
+  .media-lightbox.annotating .lb-annot-bar{ opacity:1; pointer-events:auto; transform:translateX(-50%) translateY(0) scale(1); }
+  .lb-annot-swatches{ display:flex; gap:6px; padding-right:6px; border-right:1px solid rgba(255,255,255,0.16); margin-right:2px; }
+  .lb-annot-swatch{
+    width:24px; height:24px; border-radius:50%; border:2px solid rgba(255,255,255,0.45);
+    background: var(--sw-c); cursor:pointer; padding:0; flex-shrink:0;
+    transition: transform .2s cubic-bezier(.3,1.5,.4,1), box-shadow .2s ease, border-color .2s ease;
+  }
+  .lb-annot-swatch:hover{ transform: scale(1.16); }
+  .lb-annot-swatch.sel{ transform: scale(1.26); border-color:#fff; box-shadow: 0 0 0 3px rgba(255,255,255,0.22); }
+  .lb-annot-tool{
+    width:30px; height:30px; border-radius:50%; border:none; background: rgba(255,255,255,0.10);
+    color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    transition: background .16s ease, transform .16s ease;
+  }
+  .lb-annot-tool:hover{ background: rgba(255,255,255,0.2); }
+  .lb-annot-tool.sel{ background: rgba(255,255,255,0.34); }
+  .lb-annot-tool:active, .lb-annot-swatch:active{ transform: scale(0.86); }
+  @media (max-width:600px){
+    .lb-annot-bar{ bottom:14px; padding:8px 10px; gap:7px; max-width:94vw; }
+    .lb-annot-swatch{ width:22px; height:22px; }
+  }
   .lb-spinner{
     width:34px; height:34px; border-radius:50%;
     border:3px solid rgba(255,255,255,0.25); border-top-color:#fff;
@@ -886,11 +931,29 @@
 
 <!-- ============================= MEDIA LIGHTBOX ============================= -->
 <div class="media-lightbox" id="mediaLightbox">
+  <button class="lb-close" id="lbAnnotBtn" style="right:64px" title="Annotate"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 20h9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
   <button class="lb-close" id="lbCloseBtn" title="Close"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button>
   <button class="lb-nav lb-prev" id="lbPrevBtn" title="Previous"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
   <div class="lb-stage" id="lbStage"></div>
+  <canvas class="lb-annot-canvas" id="lbAnnotCanvas"></canvas>
   <button class="lb-nav lb-next" id="lbNextBtn" title="Next"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
   <div class="lb-counter" id="lbCounter"></div>
+
+  <div class="lb-annot-bar" id="lbAnnotBar">
+    <div class="lb-annot-swatches" id="lbAnnotSwatches">
+      <button class="lb-annot-swatch sel" data-color="#ff3b30" style="--sw-c:#ff3b30" title="Red"></button>
+      <button class="lb-annot-swatch" data-color="#ffcc00" style="--sw-c:#ffcc00" title="Yellow"></button>
+      <button class="lb-annot-swatch" data-color="#34c759" style="--sw-c:#34c759" title="Green"></button>
+      <button class="lb-annot-swatch" data-color="#0a84ff" style="--sw-c:#0a84ff" title="Blue"></button>
+      <button class="lb-annot-swatch" data-color="#ffffff" style="--sw-c:#ffffff" title="White"></button>
+      <button class="lb-annot-swatch" data-color="#1c1c1e" style="--sw-c:#1c1c1e" title="Black"></button>
+    </div>
+    <button class="lb-annot-tool" id="lbEraserBtn" title="Eraser"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="m16 3 5 5-9.5 9.5H7L2.5 13Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M8 21h13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+    <button class="lb-annot-tool" id="lbUndoBtn" title="Undo"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M9 7 4 12l5 5M4 12h11a5 5 0 0 1 0 10h-1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <button class="lb-annot-tool" id="lbClearBtn" title="Clear all"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0-.7 12.1a2 2 0 0 1-2 1.9H9.7a2 2 0 0 1-2-1.9L7 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <button class="btn ghost sm" id="lbCancelAnnotBtn">Cancel</button>
+    <button class="btn primary sm" id="lbSaveAnnotBtn">Save</button>
+  </div>
 </div>
 
 <!-- ============================= CONFIRM MODAL ============================= -->
@@ -1582,45 +1645,61 @@ async function resolveMediaItem(p){
   }
   return { url: url || '', type };
 }
-async function resolveEntryMedia(entry){
-  const items = [];
-  for(const p of entry.qPhotos) items.push(await resolveMediaItem(p));
-  for(const p of entry.sPhotos) items.push(await resolveMediaItem(p));
-  return items;
+async function resolveAnnotUrl(ref){
+  if(!ref.annotKey && !ref.annotDriveId) return null;
+  if(ref.annotKey){ const u = await blobKeyToUrl(ref.annotKey); if(u) return u; }
+  if(ref.annotDriveId && isDriveReady()){
+    try{
+      const blob = await downloadDriveBlob(ref.annotDriveId);
+      const url = URL.createObjectURL(blob);
+      objectUrlCache.set(ref.annotDriveId, url);
+      return url;
+    }catch(e){ console.error(e); }
+  }
+  return null;
 }
 
-async function renderLightboxStrip(sel, entry, indexOffset){
+function renderLightboxStrip(sel, entry, indexOffset){
   const strip = $(sel);
   strip.innerHTML = '';
   const refs = indexOffset === 0 ? entry.qPhotos : entry.sPhotos;
-  for(let i=0;i<refs.length;i++){
-    const p = refs[i];
+  refs.forEach((p, i)=>{
     const type = p.type || 'image';
-    const resolved = await resolveMediaItem(p);
+    const wrap = document.createElement('div');
+    wrap.className = 'strip-item';
     const el = document.createElement(type === 'video' ? 'video' : 'img');
     if(type === 'video'){ el.muted = true; el.playsInline = true; el.preload = 'metadata'; }
     else { el.alt = 'photo'; }
-    el.src = resolved.url;
     el.style.cursor = 'zoom-in';
+    wrap.appendChild(el);
+    strip.appendChild(wrap);
+    resolveMediaItem(p).then(resolved=>{ el.src = resolved.url; });
+    if(type === 'image' && (p.annotKey || p.annotDriveId)){
+      const annotImg = document.createElement('img');
+      annotImg.className = 'lb-annot-view';
+      wrap.appendChild(annotImg);
+      resolveAnnotUrl(p).then(url=>{ if(url) annotImg.src = url; });
+    }
     const combinedIndex = indexOffset + i;
     el.addEventListener('click', ()=> openMediaLightboxForEntry(entry, combinedIndex));
-    strip.appendChild(el);
-  }
+  });
 }
 
 /* ---- fullscreen media lightbox ----
    Browses one entry's Question→Solution media as a single sequence, then
    rolls seamlessly into the next/previous entry (same order as the current
-   grid) once you go past either end — so "next" from an entry's last photo
-   lands on the next entry's first Question photo, and so on. Tap to
-   enlarge, pinch/wheel zoom, drag to pan while zoomed, swipe or arrow keys
-   to move, double-tap/double-click to zoom. */
+   grid) once you go past either end. Each item is resolved (and shown) the
+   instant it's needed rather than waiting for the whole entry's media to
+   load first — the rest of the entry resolves quietly in the background so
+   navigating onward is instant too. */
 let lbEntryList = [];
 let lbEntryIndex = 0;
+let lbRefs = [];
 let lbItems = [];
 let lbItemIndex = 0;
-let lbBusy = false;
 let lbScale = 1, lbPanX = 0, lbPanY = 0;
+
+function currentLbRef(){ return lbRefs[lbItemIndex]; }
 
 function openMediaLightboxForEntry(entry, itemIndex){
   lbEntryList = getFilteredEntries();
@@ -1631,21 +1710,37 @@ function openMediaLightboxForEntry(entry, itemIndex){
   loadLightboxEntry(false);
 }
 function closeMediaLightbox(){
+  exitAnnotMode();
   $('#mediaLightbox').classList.remove('show');
   $('#lbStage').innerHTML = '';
+}
+async function ensureLbItemResolved(i){
+  if(!lbRefs[i]) return null;
+  if(!lbItems[i]) lbItems[i] = await resolveMediaItem(lbRefs[i]);
+  return lbItems[i];
+}
+async function showLbItem(i){
+  lbItemIndex = i;
+  if(lbItems[i]){
+    renderLightboxStage(lbItems[i]);
+  } else {
+    $('#lbStage').innerHTML = '<div class="lb-spinner"></div>';
+    const item = await ensureLbItemResolved(i);
+    renderLightboxStage(item);
+  }
 }
 async function loadLightboxEntry(fromNavigation){
   const entry = lbEntryList[lbEntryIndex];
   if(!entry) return;
-  lbBusy = true;
-  $('#lbStage').innerHTML = '<div class="lb-spinner"></div>';
-  lbItems = await resolveEntryMedia(entry);
-  lbBusy = false;
+  exitAnnotMode();
+  lbRefs = [...entry.qPhotos, ...entry.sPhotos];
+  lbItems = new Array(lbRefs.length).fill(null);
   if(fromNavigation) populateViewModal(entry); // keep the modal behind it in sync as we roll across entries
-  renderLightboxStage();
+  await showLbItem(lbItemIndex);
+  lbRefs.forEach((_, i)=>{ if(i !== lbItemIndex) ensureLbItemResolved(i); }); // background prefetch, doesn't block
 }
 function applyLbTransform(withTransition){
-  const media = $('#lbStage').querySelector('img, video');
+  const media = $('#lbMedia');
   if(!media) return;
   media.style.transition = withTransition ? 'transform .25s cubic-bezier(.2,.8,.2,1)' : 'none';
   media.style.transform = `translate(${lbPanX}px, ${lbPanY}px) scale(${lbScale})`;
@@ -1654,29 +1749,39 @@ function resetLbZoom(withTransition){
   lbScale = 1; lbPanX = 0; lbPanY = 0;
   applyLbTransform(withTransition);
 }
-function renderLightboxStage(){
+function renderLightboxStage(item){
   const stage = $('#lbStage');
   stage.innerHTML = '';
-  const item = lbItems[lbItemIndex];
   if(!item) return;
   const el = document.createElement(item.type === 'video' ? 'video' : 'img');
   if(item.type === 'video'){ el.controls = true; el.autoplay = true; el.playsInline = true; }
+  el.id = 'lbMedia';
   el.src = item.url;
   el.draggable = false;
   stage.appendChild(el);
   lbScale = 1; lbPanX = 0; lbPanY = 0;
   applyLbTransform(false);
+
+  const ref = currentLbRef();
+  if(item.type === 'image' && ref && (ref.annotKey || ref.annotDriveId)){
+    const annotImg = document.createElement('img');
+    annotImg.id = 'lbAnnotView';
+    annotImg.className = 'lb-annot-view';
+    stage.appendChild(annotImg);
+    resolveAnnotUrl(ref).then(url=>{ if(url) annotImg.src = url; });
+  }
+
   const entry = lbEntryList[lbEntryIndex];
-  const canNav = lbEntryList.length > 1 || lbItems.length > 1;
-  $('#lbCounter').textContent = entry ? `${entry.chapter} — ${lbItemIndex+1}/${lbItems.length}` : '';
+  const canNav = lbEntryList.length > 1 || lbRefs.length > 1;
+  $('#lbCounter').textContent = entry ? `${entry.chapter} — ${lbItemIndex+1}/${lbRefs.length}` : '';
   $('#lbPrevBtn').classList.toggle('hidden', !canNav);
   $('#lbNextBtn').classList.toggle('hidden', !canNav);
+  $('#lbAnnotBtn').classList.toggle('hidden', item.type === 'video');
 }
 async function lbGoNext(){
-  if(lbBusy) return;
-  if(lbItemIndex < lbItems.length - 1){
-    lbItemIndex++;
-    renderLightboxStage();
+  if(lbAnnotMode) return;
+  if(lbItemIndex < lbRefs.length - 1){
+    await showLbItem(lbItemIndex + 1);
   } else if(lbEntryList.length > 1){
     lbEntryIndex = (lbEntryIndex + 1) % lbEntryList.length;
     lbItemIndex = 0;
@@ -1684,10 +1789,9 @@ async function lbGoNext(){
   }
 }
 async function lbGoPrev(){
-  if(lbBusy) return;
+  if(lbAnnotMode) return;
   if(lbItemIndex > 0){
-    lbItemIndex--;
-    renderLightboxStage();
+    await showLbItem(lbItemIndex - 1);
   } else if(lbEntryList.length > 1){
     lbEntryIndex = (lbEntryIndex - 1 + lbEntryList.length) % lbEntryList.length;
     const prevEntry = lbEntryList[lbEntryIndex];
@@ -1789,6 +1893,153 @@ lbStageEl.addEventListener('dblclick', ()=>{
   if(lbCurrentIsVideo()) return;
   if(lbScale > 1) resetLbZoom(true); else { lbScale = 2.5; applyLbTransform(true); }
 });
+
+/* ---- Annotate: freehand markup saved as a transparent overlay PNG, kept
+   fully separate from the original photo so it can be reloaded and edited
+   further later, on any device — never destructively baked into the photo. */
+let lbAnnotMode = false;
+let lbAnnotColor = '#ff3b30';
+let lbAnnotTool = 'pen';
+let lbAnnotStrokes = [];
+let lbAnnotDrawing = false;
+let lbAnnotCtx = null;
+let lbAnnotBaseImg = null;
+let lbAnnotCssW = 0, lbAnnotCssH = 0;
+
+function redrawAnnotCanvas(){
+  if(!lbAnnotCtx) return;
+  lbAnnotCtx.clearRect(0, 0, lbAnnotCssW, lbAnnotCssH);
+  if(lbAnnotBaseImg){
+    lbAnnotCtx.globalCompositeOperation = 'source-over';
+    lbAnnotCtx.drawImage(lbAnnotBaseImg, 0, 0, lbAnnotCssW, lbAnnotCssH);
+  }
+  lbAnnotStrokes.forEach(stroke=>{
+    lbAnnotCtx.globalCompositeOperation = stroke.tool === 'eraser' ? 'destination-out' : 'source-over';
+    lbAnnotCtx.strokeStyle = stroke.color;
+    lbAnnotCtx.lineWidth = stroke.tool === 'eraser' ? 18 : 4;
+    lbAnnotCtx.beginPath();
+    stroke.points.forEach((p,i)=>{ if(i===0) lbAnnotCtx.moveTo(p.x,p.y); else lbAnnotCtx.lineTo(p.x,p.y); });
+    lbAnnotCtx.stroke();
+  });
+}
+
+async function enterAnnotMode(){
+  const ref = currentLbRef();
+  const item = lbItems[lbItemIndex];
+  if(!ref || !item || item.type === 'video') return;
+  const media = $('#lbMedia');
+  if(!media) return;
+
+  lbAnnotMode = true;
+  $('#mediaLightbox').classList.add('annotating');
+
+  const canvas = $('#lbAnnotCanvas');
+  const rect = media.getBoundingClientRect();
+  const stageRect = $('#lbStage').getBoundingClientRect();
+  lbAnnotCssW = rect.width; lbAnnotCssH = rect.height;
+  canvas.style.left = (rect.left - stageRect.left) + 'px';
+  canvas.style.top = (rect.top - stageRect.top) + 'px';
+  canvas.style.width = rect.width + 'px';
+  canvas.style.height = rect.height + 'px';
+  canvas.width = Math.round(rect.width * 2);
+  canvas.height = Math.round(rect.height * 2);
+  lbAnnotCtx = canvas.getContext('2d');
+  lbAnnotCtx.setTransform(2,0,0,2,0,0);
+  lbAnnotCtx.lineCap = 'round'; lbAnnotCtx.lineJoin = 'round';
+  lbAnnotStrokes = [];
+  lbAnnotBaseImg = null;
+
+  if(ref.annotKey || ref.annotDriveId){
+    const url = await resolveAnnotUrl(ref);
+    if(url){
+      const img = new Image();
+      await new Promise((res)=>{ img.onload = res; img.onerror = res; img.src = url; });
+      lbAnnotBaseImg = img;
+    }
+  }
+  redrawAnnotCanvas();
+}
+function exitAnnotMode(){
+  if(!lbAnnotMode) return;
+  lbAnnotMode = false;
+  $('#mediaLightbox').classList.remove('annotating');
+  lbAnnotCtx = null;
+  lbAnnotBaseImg = null;
+  lbAnnotStrokes = [];
+}
+function annotPos(e){
+  const rect = lbAnnotCanvasEl.getBoundingClientRect();
+  return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+}
+const lbAnnotCanvasEl = $('#lbAnnotCanvas');
+lbAnnotCanvasEl.addEventListener('pointerdown', (e)=>{
+  if(!lbAnnotMode) return;
+  lbAnnotDrawing = true;
+  lbAnnotCanvasEl.setPointerCapture(e.pointerId);
+  const p = annotPos(e);
+  const stroke = { tool: lbAnnotTool, color: lbAnnotColor, points:[p] };
+  lbAnnotStrokes.push(stroke);
+  lbAnnotCtx.globalCompositeOperation = stroke.tool === 'eraser' ? 'destination-out' : 'source-over';
+  lbAnnotCtx.strokeStyle = stroke.color;
+  lbAnnotCtx.lineWidth = stroke.tool === 'eraser' ? 18 : 4;
+  lbAnnotCtx.beginPath();
+  lbAnnotCtx.moveTo(p.x, p.y);
+});
+lbAnnotCanvasEl.addEventListener('pointermove', (e)=>{
+  if(!lbAnnotMode || !lbAnnotDrawing) return;
+  const p = annotPos(e);
+  lbAnnotStrokes[lbAnnotStrokes.length-1].points.push(p);
+  lbAnnotCtx.lineTo(p.x, p.y);
+  lbAnnotCtx.stroke();
+});
+function endAnnotStroke(){ lbAnnotDrawing = false; }
+lbAnnotCanvasEl.addEventListener('pointerup', endAnnotStroke);
+lbAnnotCanvasEl.addEventListener('pointercancel', endAnnotStroke);
+
+$('#lbAnnotBtn').onclick = ()=>{ if(lbAnnotMode) exitAnnotMode(); else enterAnnotMode(); };
+$('#lbCancelAnnotBtn').onclick = exitAnnotMode;
+$('#lbClearBtn').onclick = ()=>{
+  lbAnnotStrokes = [];
+  lbAnnotBaseImg = null;
+  redrawAnnotCanvas();
+};
+$('#lbUndoBtn').onclick = ()=>{
+  if(lbAnnotStrokes.length === 0) return;
+  lbAnnotStrokes.pop();
+  redrawAnnotCanvas();
+};
+$('#lbEraserBtn').onclick = ()=>{
+  lbAnnotTool = lbAnnotTool === 'eraser' ? 'pen' : 'eraser';
+  $('#lbEraserBtn').classList.toggle('sel', lbAnnotTool === 'eraser');
+};
+$('#lbAnnotSwatches').addEventListener('click', (e)=>{
+  const sw = e.target.closest('.lb-annot-swatch');
+  if(!sw) return;
+  lbAnnotColor = sw.dataset.color;
+  $all('.lb-annot-swatch').forEach(s=>s.classList.remove('sel'));
+  sw.classList.add('sel');
+  lbAnnotTool = 'pen';
+  $('#lbEraserBtn').classList.remove('sel');
+});
+$('#lbSaveAnnotBtn').onclick = async ()=>{
+  const ref = currentLbRef();
+  const entry = lbEntryList[lbEntryIndex];
+  const canvas = $('#lbAnnotCanvas');
+  if(!ref || !entry || !lbAnnotCtx) return;
+  const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+  if(!blob){ toast('Could not save that annotation'); return; }
+  const annotKey = (ref.key || (entry.id + '_annot_src_' + lbItemIndex)) + '_annot';
+  await idbSetBlob(annotKey, blob, 'image/png');
+  ref.annotKey = annotKey;
+  ref.annotDriveId = null; // stale now — will re-upload on next sync
+  entry.pendingUpload = true;
+  entry.updatedAt = nowIso();
+  persistEntries();
+  toast('Annotation saved');
+  exitAnnotMode();
+  await showLbItem(lbItemIndex);
+  maybeSync();
+};
 
 $('#viewCloseBtn').onclick = ()=> hideOverlay('#viewOverlay');
 $('#viewEditBtn').onclick = ()=>{
@@ -2413,7 +2664,7 @@ function stripLocalFields(entry){
   const clone = JSON.parse(JSON.stringify(entry));
   delete clone.pendingUpload;
   delete clone.remoteOnly;
-  const stripPhoto = p => ({ driveId: p.driveId, type: p.type || 'image' });
+  const stripPhoto = p => ({ driveId: p.driveId, type: p.type || 'image', annotDriveId: p.annotDriveId || null });
   clone.qPhotos = entry.qPhotos.map(stripPhoto);
   clone.sPhotos = entry.sPhotos.map(stripPhoto);
   clone.voice = entry.voice ? { driveId: entry.voice.driveId, mime: entry.voice.mime } : null;
@@ -2421,24 +2672,21 @@ function stripLocalFields(entry){
 }
 
 async function pushEntryMedia(entry, folderId){
-  for(const p of entry.qPhotos){
+  async function pushOne(p, prefix){
     if(!p.driveId && p.key){
       const rec = await idbGetBlob(p.key);
       if(rec){
         const isVideo = p.type === 'video';
-        p.driveId = await uploadMediaBlob(entry.id + (isVideo ? '_q.mp4' : '_q.jpg'), rec.blob, rec.mime || (isVideo ? 'video/mp4' : 'image/jpeg'), folderId);
+        p.driveId = await uploadMediaBlob(entry.id + (isVideo ? prefix+'.mp4' : prefix+'.jpg'), rec.blob, rec.mime || (isVideo ? 'video/mp4' : 'image/jpeg'), folderId);
       }
     }
-  }
-  for(const p of entry.sPhotos){
-    if(!p.driveId && p.key){
-      const rec = await idbGetBlob(p.key);
-      if(rec){
-        const isVideo = p.type === 'video';
-        p.driveId = await uploadMediaBlob(entry.id + (isVideo ? '_s.mp4' : '_s.jpg'), rec.blob, rec.mime || (isVideo ? 'video/mp4' : 'image/jpeg'), folderId);
-      }
+    if(p.annotKey && !p.annotDriveId){
+      const rec = await idbGetBlob(p.annotKey);
+      if(rec) p.annotDriveId = await uploadMediaBlob(entry.id + prefix + '_annot.png', rec.blob, 'image/png', folderId);
     }
   }
+  for(const p of entry.qPhotos) await pushOne(p, '_q');
+  for(const p of entry.sPhotos) await pushOne(p, '_s');
   if(entry.voice && !entry.voice.driveId && entry.voice.key){
     const rec = await idbGetBlob(entry.voice.key);
     if(rec) entry.voice.driveId = await uploadMediaBlob(entry.id + '_voice', rec.blob, entry.voice.mime || 'audio/webm', folderId);
