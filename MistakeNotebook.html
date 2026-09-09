@@ -131,9 +131,9 @@
 
   .topbar{
     position: sticky; top: 12px; z-index: 40;
-    display:flex; align-items:center; gap:10px;
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap; row-gap:10px;
     padding: 9px 10px 9px 16px;
-    border-radius: 999px;
+    border-radius: var(--radius-xl);
     margin-bottom: 18px;
   }
   .brand{ display:flex; align-items:center; gap:10px; margin-right: 2px; flex-shrink:0; }
@@ -508,8 +508,8 @@
     opacity:0; pointer-events:none; transition: opacity .2s ease;
   }
   .media-lightbox.show{ opacity:1; pointer-events:auto; }
-  .lb-stage{ width:100%; height:100%; display:flex; align-items:center; justify-content:center; padding:56px 64px; }
-  .lb-stage img, .lb-stage video{ max-width:100%; max-height:100%; border-radius:12px; object-fit:contain; }
+  .lb-stage{ width:100%; height:100%; display:flex; align-items:center; justify-content:center; padding:56px 64px; overflow:hidden; touch-action:none; }
+  .lb-stage img, .lb-stage video{ max-width:100%; max-height:100%; border-radius:12px; object-fit:contain; will-change:transform; user-select:none; -webkit-user-drag:none; }
   .lb-close{
     position:absolute; top:16px; right:16px; width:40px; height:40px; border-radius:50%;
     background: rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.15); color:#fff;
@@ -546,6 +546,10 @@
   .confirm-modal{ max-width:340px; text-align:center; border-radius: var(--radius-xl) !important; }
   .confirm-modal p{ color: var(--ink-soft); font-size:13.5px; line-height:1.5; }
 
+  /* Tablets / split-screen: single-row desktop-style topbar has comfortably
+     enough width here, no extra rules needed — the base radius fix below
+     already covers this range safely too. */
+
   @media (max-width: 600px){
     #app{ padding: 12px 12px 110px; }
 
@@ -556,7 +560,7 @@
        oversized blob next to the search box's normal pill — a large but
        finite radius keeps the two visually in the same family instead of
        clashing. */
-    .topbar{ flex-wrap:wrap; row-gap:10px; padding:9px 12px; border-radius: var(--radius-xl); }
+    .topbar{ row-gap:10px; padding:9px 12px; }
     .search-wrap{ order:3; flex-basis:100%; }
     .brand-text span{ display:none; }
     .sync-pill{ width:34px; height:34px; padding:0; justify-content:center; border-radius:50%; gap:0; }
@@ -1583,9 +1587,12 @@ async function renderLightbox(sel, mediaItems){
   }
 }
 
-/* ---- fullscreen media lightbox (tap to enlarge) ---- */
+/* ---- fullscreen media lightbox: tap to enlarge, pinch/wheel zoom, pan,
+   swipe between items, double-tap/double-click to zoom ---- */
 let lightboxItems = [];
 let lightboxIndex = 0;
+let lbScale = 1, lbPanX = 0, lbPanY = 0;
+
 function openMediaLightbox(items, startIndex){
   lightboxItems = items;
   lightboxIndex = startIndex || 0;
@@ -1596,6 +1603,16 @@ function closeMediaLightbox(){
   $('#mediaLightbox').classList.remove('show');
   $('#lbStage').innerHTML = '';
 }
+function applyLbTransform(withTransition){
+  const media = $('#lbStage').querySelector('img, video');
+  if(!media) return;
+  media.style.transition = withTransition ? 'transform .25s cubic-bezier(.2,.8,.2,1)' : 'none';
+  media.style.transform = `translate(${lbPanX}px, ${lbPanY}px) scale(${lbScale})`;
+}
+function resetLbZoom(withTransition){
+  lbScale = 1; lbPanX = 0; lbPanY = 0;
+  applyLbTransform(withTransition);
+}
 function renderLightboxStage(){
   const stage = $('#lbStage');
   stage.innerHTML = '';
@@ -1604,21 +1621,108 @@ function renderLightboxStage(){
   const el = document.createElement(item.type === 'video' ? 'video' : 'img');
   if(item.type === 'video'){ el.controls = true; el.autoplay = true; el.playsInline = true; }
   el.src = item.url;
+  el.draggable = false;
   stage.appendChild(el);
+  lbScale = 1; lbPanX = 0; lbPanY = 0;
+  applyLbTransform(false);
   const multi = lightboxItems.length > 1;
   $('#lbCounter').textContent = multi ? (lightboxIndex+1) + ' / ' + lightboxItems.length : '';
   $('#lbPrevBtn').classList.toggle('hidden', !multi);
   $('#lbNextBtn').classList.toggle('hidden', !multi);
 }
+function lbGoPrev(){ lightboxIndex = (lightboxIndex - 1 + lightboxItems.length) % lightboxItems.length; renderLightboxStage(); }
+function lbGoNext(){ lightboxIndex = (lightboxIndex + 1) % lightboxItems.length; renderLightboxStage(); }
 $('#lbCloseBtn').onclick = closeMediaLightbox;
-$('#lbPrevBtn').onclick = ()=>{ lightboxIndex = (lightboxIndex - 1 + lightboxItems.length) % lightboxItems.length; renderLightboxStage(); };
-$('#lbNextBtn').onclick = ()=>{ lightboxIndex = (lightboxIndex + 1) % lightboxItems.length; renderLightboxStage(); };
+$('#lbPrevBtn').onclick = lbGoPrev;
+$('#lbNextBtn').onclick = lbGoNext;
 $('#mediaLightbox').addEventListener('click', (e)=>{ if(e.target.id === 'mediaLightbox' || e.target.id === 'lbStage') closeMediaLightbox(); });
 document.addEventListener('keydown', (e)=>{
   if(!$('#mediaLightbox').classList.contains('show')) return;
   if(e.key === 'Escape') closeMediaLightbox();
-  if(e.key === 'ArrowLeft' && lightboxItems.length > 1) $('#lbPrevBtn').click();
-  if(e.key === 'ArrowRight' && lightboxItems.length > 1) $('#lbNextBtn').click();
+  if(e.key === 'ArrowLeft' && lightboxItems.length > 1) lbGoPrev();
+  if(e.key === 'ArrowRight' && lightboxItems.length > 1) lbGoNext();
+});
+
+/* Gestures. Real-time drag/pinch tracking uses no CSS transition (must feel
+   1:1 with your fingers to feel smooth); snapping back to rest or jumping to
+   a double-tap zoom level uses a short eased transition — that combination
+   is what makes it feel like a proper photo viewer instead of a raw image. */
+const lbStageEl = $('#lbStage');
+let lbTouchMode = null; // 'pinch' | 'pan' | 'swipe'
+let lbPinchStartDist = 0, lbPinchStartScale = 1;
+let lbPanStartX = 0, lbPanStartY = 0, lbPanOriginX = 0, lbPanOriginY = 0;
+let lbSwipeStartX = 0, lbSwipeStartY = 0;
+let lbLastTapTime = 0, lbLastTapX = 0, lbLastTapY = 0;
+function lbTouchDist(t1, t2){ return Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY); }
+function lbCurrentIsVideo(){ const it = lightboxItems[lightboxIndex]; return it && it.type === 'video'; }
+
+lbStageEl.addEventListener('touchstart', (e)=>{
+  if(e.touches.length === 2 && !lbCurrentIsVideo()){
+    lbTouchMode = 'pinch';
+    lbPinchStartDist = lbTouchDist(e.touches[0], e.touches[1]);
+    lbPinchStartScale = lbScale;
+  } else if(e.touches.length === 1){
+    if(lbScale > 1.01){
+      lbTouchMode = 'pan';
+      lbPanStartX = e.touches[0].clientX; lbPanStartY = e.touches[0].clientY;
+      lbPanOriginX = lbPanX; lbPanOriginY = lbPanY;
+    } else {
+      lbTouchMode = 'swipe';
+      lbSwipeStartX = e.touches[0].clientX; lbSwipeStartY = e.touches[0].clientY;
+    }
+  }
+}, {passive:true});
+
+lbStageEl.addEventListener('touchmove', (e)=>{
+  if(lbTouchMode === 'pinch' && e.touches.length === 2){
+    e.preventDefault();
+    const dist = lbTouchDist(e.touches[0], e.touches[1]);
+    lbScale = Math.min(Math.max(lbPinchStartScale * (dist / lbPinchStartDist), 1), 5);
+    applyLbTransform(false);
+  } else if(lbTouchMode === 'pan' && e.touches.length === 1){
+    e.preventDefault();
+    lbPanX = lbPanOriginX + (e.touches[0].clientX - lbPanStartX);
+    lbPanY = lbPanOriginY + (e.touches[0].clientY - lbPanStartY);
+    applyLbTransform(false);
+  }
+}, {passive:false});
+
+lbStageEl.addEventListener('touchend', (e)=>{
+  if(lbTouchMode === 'pinch' || lbTouchMode === 'pan'){
+    if(lbScale <= 1.02) resetLbZoom(true);
+    lbTouchMode = null;
+    return;
+  }
+  if(lbTouchMode === 'swipe'){
+    const endX = e.changedTouches[0].clientX, endY = e.changedTouches[0].clientY;
+    const dx = endX - lbSwipeStartX, dy = endY - lbSwipeStartY;
+    if(lightboxItems.length > 1 && Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.5){
+      if(dx < 0) lbGoNext(); else lbGoPrev();
+    } else if(!lbCurrentIsVideo()){
+      const now = Date.now();
+      const closeEnough = Math.abs(endX - lbLastTapX) < 30 && Math.abs(endY - lbLastTapY) < 30;
+      if(now - lbLastTapTime < 320 && closeEnough){
+        if(lbScale > 1) resetLbZoom(true); else { lbScale = 2.5; applyLbTransform(true); }
+        lbLastTapTime = 0;
+      } else {
+        lbLastTapTime = now; lbLastTapX = endX; lbLastTapY = endY;
+      }
+    }
+    lbTouchMode = null;
+  }
+}, {passive:true});
+
+// Desktop / trackpad: wheel to zoom, double-click to toggle zoom.
+lbStageEl.addEventListener('wheel', (e)=>{
+  if(lbCurrentIsVideo()) return;
+  e.preventDefault();
+  const factor = e.deltaY < 0 ? 1.15 : 0.87;
+  lbScale = Math.min(Math.max(lbScale * factor, 1), 5);
+  if(lbScale <= 1.02) resetLbZoom(true); else applyLbTransform(false);
+}, {passive:false});
+lbStageEl.addEventListener('dblclick', ()=>{
+  if(lbCurrentIsVideo()) return;
+  if(lbScale > 1) resetLbZoom(true); else { lbScale = 2.5; applyLbTransform(true); }
 });
 
 $('#viewCloseBtn').onclick = ()=> hideOverlay('#viewOverlay');
@@ -1946,6 +2050,7 @@ $('#editClientIdBtn').onclick = ()=>{
 };
 $('#disconnectDriveBtn').onclick = ()=>{
   accessToken = null; tokenExpiry = 0; gisTokenClient = null;
+  clearTokenStorage();
   refreshDriveSettingsUI();
   updateSyncPill('local');
   toast('Signed out of Google Drive');
@@ -2047,6 +2152,28 @@ async function initDrive(clientId){
   });
 }
 
+const LS_DRIVE_TOKEN = 'mn_drive_token_v1';
+function saveTokenToStorage(){
+  try{ localStorage.setItem(LS_DRIVE_TOKEN, JSON.stringify({ accessToken, tokenExpiry })); }
+  catch(e){ /* storage full or unavailable — token just won't survive a reload this time */ }
+}
+function loadTokenFromStorage(){
+  try{
+    const raw = localStorage.getItem(LS_DRIVE_TOKEN);
+    if(!raw) return false;
+    const data = JSON.parse(raw);
+    if(data.accessToken && data.tokenExpiry && Date.now() < data.tokenExpiry){
+      accessToken = data.accessToken;
+      tokenExpiry = data.tokenExpiry;
+      return true;
+    }
+  }catch(e){ /* ignore */ }
+  return false;
+}
+function clearTokenStorage(){
+  try{ localStorage.removeItem(LS_DRIVE_TOKEN); }catch(e){ /* ignore */ }
+}
+
 function requestToken(promptType){
   return new Promise((resolve, reject)=>{
     if(!gisTokenClient){ reject(new Error('Drive not initialized')); return; }
@@ -2054,6 +2181,7 @@ function requestToken(promptType){
       if(resp.error){ reject(resp); return; }
       accessToken = resp.access_token;
       tokenExpiry = Date.now() + (resp.expires_in*1000 - 60000);
+      saveTokenToStorage();
       resolve(accessToken);
     };
     gisTokenClient.requestAccessToken({ prompt: promptType || '' });
@@ -2263,12 +2391,18 @@ async function init(){
   renderGrid();
 
   // Prepare the Drive client (cheap, no network call, no popup) so the
-  // sign-in button works instantly — but never request a token
-  // automatically. A token is only ever requested in direct response to
-  // the user tapping "Sign in with Google" or "Sync now".
+  // sign-in button works instantly. Then check for a still-valid token left
+  // over from an earlier sign-in this last hour — if there is one, reuse it
+  // directly with zero network calls, so a refresh doesn't cost you a
+  // sign-in at all. Only once that saved token genuinely expires does the
+  // app fall back to waiting for an explicit tap.
   if(isDriveReady()){
     try{ await initDrive(settings.clientId); }
     catch(err){ console.warn('Drive client failed to initialize', err); }
+    if(loadTokenFromStorage()){
+      updateSyncPill('syncing');
+      syncWithDrive();
+    }
   }
   refreshDriveSettingsUI();
 }
