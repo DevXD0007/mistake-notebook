@@ -40,6 +40,12 @@
     --phy:#3b7dc4;
     --chem:#2f9e74;
     --math:#c9791f;
+    --mt-concept:#8b5cf6;
+    --mt-silly:#e0891a;
+    --mt-misread:#3b82c9;
+    --mt-time:#d63a83;
+    --mt-formula:#0f9e94;
+    --mt-other:#6b7280;
     --radius-xl: 30px;
     --radius-lg: 22px;
     --radius-md: 16px;
@@ -73,6 +79,12 @@
     --phy:#6ea8e8;
     --chem:#57cd9d;
     --math:#f0a94a;
+    --mt-concept:#ab8bf7;
+    --mt-silly:#f0a94a;
+    --mt-misread:#6ea8e8;
+    --mt-time:#f472b6;
+    --mt-formula:#3fcfc4;
+    --mt-other:#9199ab;
     --blob-1: radial-gradient(circle, rgba(255,111,94,0.14), transparent 62%);
     --blob-2: radial-gradient(circle, rgba(110,168,232,0.12), transparent 62%);
     --blob-3: radial-gradient(circle, rgba(240,169,74,0.10), transparent 62%);
@@ -298,8 +310,12 @@
   .entry-meta{ font-size:11.5px; color: var(--ink-faint); display:flex; gap:8px; align-items:center; flex-wrap:wrap;}
   .entry-chips{ display:flex; gap:5px; flex-wrap:wrap; margin-top:2px;}
   .mini-chip{
-    font-size:10px; font-weight:600; padding:4px 9px; border-radius:999px;
+    font-size:10px; font-weight:650; padding:4px 9px; border-radius:999px;
     background: rgba(127,127,127,0.10); color: var(--ink-soft);
+  }
+  .mini-chip[style*="--tag-c"]{
+    color: var(--tag-c);
+    background: color-mix(in srgb, var(--tag-c) 16%, transparent);
   }
   .entry-note-preview{ font-size:12px; color: var(--ink-soft); line-height:1.4;
     display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
@@ -373,7 +389,7 @@
     border-radius:999px; font-size:12.5px; font-weight:600; color: var(--ink-soft); cursor:pointer;
     transition: all .15s ease;
   }
-  .chip-toggle.on{ background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+  .chip-toggle.on{ background: color-mix(in srgb, var(--tag-c, var(--accent)) 16%, transparent); color: var(--tag-c, var(--accent)); border-color: var(--tag-c, var(--accent)); }
 
   .status-toggle{ display:flex; gap:8px; }
   .status-opt{
@@ -436,6 +452,12 @@
   .section-label{ font-size:11.5px; font-weight:650; color: var(--ink-faint); margin: 16px 0 8px; letter-spacing:0; }
   .view-note{ font-size:14.5px; line-height:1.6; white-space:pre-wrap; }
   .view-meta-row{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:10px; }
+  .status-banner{
+    display:flex; align-items:center; gap:8px; padding:10px 14px; border-radius: var(--radius-md);
+    font-size:13px; font-weight:700;
+  }
+  .status-banner.revision{ background: var(--warn-soft); color: var(--warn); }
+  .status-banner.mastered{ background: var(--ok-soft); color: var(--ok); }
 
   /* ---- settings ---- */
   .settings-section{ padding: 15px 0; border-bottom:1px solid var(--glass-hairline-soft); }
@@ -479,6 +501,48 @@
   [data-theme="dark"] .toast{ background: rgba(240,241,247,0.9); color:#181a22; }
   @keyframes toastIn{ from{opacity:0; transform:translateY(-8px);} to{opacity:1; transform:translateY(0);} }
 
+  /* ---- media lightbox (tap-to-enlarge) ---- */
+  .media-lightbox{
+    position:fixed; inset:0; z-index:300; background: rgba(6,7,12,0.92);
+    display:flex; align-items:center; justify-content:center;
+    opacity:0; pointer-events:none; transition: opacity .2s ease;
+  }
+  .media-lightbox.show{ opacity:1; pointer-events:auto; }
+  .lb-stage{ width:100%; height:100%; display:flex; align-items:center; justify-content:center; padding:56px 64px; }
+  .lb-stage img, .lb-stage video{ max-width:100%; max-height:100%; border-radius:12px; object-fit:contain; }
+  .lb-close{
+    position:absolute; top:16px; right:16px; width:40px; height:40px; border-radius:50%;
+    background: rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.15); color:#fff;
+    display:flex; align-items:center; justify-content:center; cursor:pointer; backdrop-filter: blur(10px);
+  }
+  .lb-nav{
+    position:absolute; top:50%; transform:translateY(-50%); width:46px; height:46px; border-radius:50%;
+    background: rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.15); color:#fff;
+    display:flex; align-items:center; justify-content:center; cursor:pointer; backdrop-filter: blur(10px);
+  }
+  .lb-prev{ left:14px; } .lb-next{ right:14px; }
+  .lb-nav.hidden{ display:none; }
+  .lb-counter{
+    position:absolute; bottom:18px; left:50%; transform:translateX(-50%);
+    font-size:12px; font-weight:650; color:rgba(255,255,255,0.75);
+    background: rgba(255,255,255,0.1); padding:5px 12px; border-radius:999px; backdrop-filter: blur(10px);
+  }
+  @media (max-width:600px){
+    .lb-stage{ padding:80px 16px; }
+    .lb-nav{ width:40px; height:40px; }
+  }
+
+  /* ---- video items in photo strips / lightbox strips ---- */
+  .media-video-badge{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    background: rgba(10,12,20,0.28); color:#fff; pointer-events:none;
+  }
+  .video-thumb-placeholder{
+    aspect-ratio:4/3; width:100%; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:6px; background: linear-gradient(155deg, var(--accent-2), var(--accent) 70%); color:#fff;
+  }
+  .video-thumb-placeholder span{ font-size:11px; font-weight:650; }
+
   .confirm-modal{ max-width:340px; text-align:center; border-radius: var(--radius-xl) !important; }
   .confirm-modal p{ color: var(--ink-soft); font-size:13.5px; line-height:1.5; }
 
@@ -487,8 +551,12 @@
 
     /* Topbar: wrap into two rows instead of squeezing everything into one
        and overflowing — brand + status + icons on row 1, search on its own
-       full-width row 2. */
-    .topbar{ flex-wrap:wrap; row-gap:10px; padding:9px 12px; }
+       full-width row 2. Radius is dialled back from the full 999px pill:
+       once the bar is two rows tall, a full stadium shape reads as an
+       oversized blob next to the search box's normal pill — a large but
+       finite radius keeps the two visually in the same family instead of
+       clashing. */
+    .topbar{ flex-wrap:wrap; row-gap:10px; padding:9px 12px; border-radius: var(--radius-xl); }
     .search-wrap{ order:3; flex-basis:100%; }
     .brand-text span{ display:none; }
     .sync-pill{ width:34px; height:34px; padding:0; justify-content:center; border-radius:50%; gap:0; }
@@ -505,6 +573,15 @@
     .pill-select-btn{ width:100%; justify-content:space-between; }
 
     .modal-actions{ flex-wrap:wrap; }
+  }
+
+  /* ---- general scroll feel / touch polish (all sizes) ---- */
+  html{ scroll-behavior:smooth; }
+  .modal, .lightbox-strip{ -webkit-overflow-scrolling: touch; scroll-behavior:smooth; }
+  .grid{ scroll-behavior:smooth; }
+  button, .entry-card, .icon-btn, .btn, .fab, .tab, .chip-toggle, .subject-opt, .status-opt, .dropdown-item{
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
   }
 </style>
 </head>
@@ -612,35 +689,39 @@
     <div class="field">
       <label>What went wrong?</label>
       <div class="chip-row" id="mistakeChips">
-        <div class="chip-toggle" data-val="Conceptual Gap">Conceptual gap</div>
-        <div class="chip-toggle" data-val="Silly / Calculation Error">Silly / calculation error</div>
-        <div class="chip-toggle" data-val="Misread Question">Misread question</div>
-        <div class="chip-toggle" data-val="Time Pressure">Time pressure</div>
-        <div class="chip-toggle" data-val="Formula Mixed Up">Formula mixed up</div>
-        <div class="chip-toggle" data-val="Other">Other</div>
+        <div class="chip-toggle" data-val="Conceptual Gap" style="--tag-c:var(--mt-concept)">Conceptual gap</div>
+        <div class="chip-toggle" data-val="Silly / Calculation Error" style="--tag-c:var(--mt-silly)">Silly / calculation error</div>
+        <div class="chip-toggle" data-val="Misread Question" style="--tag-c:var(--mt-misread)">Misread question</div>
+        <div class="chip-toggle" data-val="Time Pressure" style="--tag-c:var(--mt-time)">Time pressure</div>
+        <div class="chip-toggle" data-val="Formula Mixed Up" style="--tag-c:var(--mt-formula)">Formula mixed up</div>
+        <div class="chip-toggle" data-val="Other" style="--tag-c:var(--mt-other)">Other</div>
       </div>
     </div>
 
     <div class="field">
-      <label>Question photo(s)</label>
+      <label>Question photo(s) or video</label>
       <div class="photo-strip" id="qPhotoStrip"></div>
       <div class="photo-add-row">
         <button class="btn sm" id="qCameraBtn">📷 Take photo</button>
-        <button class="btn sm ghost" id="qGalleryBtn">🖼 Choose photos</button>
+        <button class="btn sm ghost" id="qVideoBtn">🎥 Record video</button>
+        <button class="btn sm ghost" id="qGalleryBtn">🖼 Choose files</button>
       </div>
       <input type="file" id="qCameraInput" accept="image/*" capture="environment" style="display:none">
-      <input type="file" id="qGalleryInput" accept="image/*" multiple style="display:none">
+      <input type="file" id="qVideoInput" accept="video/*" capture="environment" style="display:none">
+      <input type="file" id="qGalleryInput" accept="image/*,video/*" multiple style="display:none">
     </div>
 
     <div class="field">
-      <label>Correct solution photo(s) <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label>
+      <label>Correct solution photo(s) or video <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label>
       <div class="photo-strip" id="sPhotoStrip"></div>
       <div class="photo-add-row">
         <button class="btn sm" id="sCameraBtn">📷 Take photo</button>
-        <button class="btn sm ghost" id="sGalleryBtn">🖼 Choose photos</button>
+        <button class="btn sm ghost" id="sVideoBtn">🎥 Record video</button>
+        <button class="btn sm ghost" id="sGalleryBtn">🖼 Choose files</button>
       </div>
       <input type="file" id="sCameraInput" accept="image/*" capture="environment" style="display:none">
-      <input type="file" id="sGalleryInput" accept="image/*" multiple style="display:none">
+      <input type="file" id="sVideoInput" accept="video/*" capture="environment" style="display:none">
+      <input type="file" id="sGalleryInput" accept="image/*,video/*" multiple style="display:none">
     </div>
 
     <div class="field">
@@ -683,6 +764,7 @@
       <h2 id="viewChapter">Entry</h2>
       <button class="icon-btn" id="viewCloseBtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
     </div>
+    <div class="status-banner" id="viewStatusBanner"></div>
     <div class="view-meta-row" id="viewMetaRow"></div>
 
     <div class="section-label">Question</div>
@@ -792,6 +874,15 @@
   </div>
 </div>
 
+<!-- ============================= MEDIA LIGHTBOX ============================= -->
+<div class="media-lightbox" id="mediaLightbox">
+  <button class="lb-close" id="lbCloseBtn" title="Close"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button>
+  <button class="lb-nav lb-prev" id="lbPrevBtn" title="Previous"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+  <div class="lb-stage" id="lbStage"></div>
+  <button class="lb-nav lb-next" id="lbNextBtn" title="Next"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+  <div class="lb-counter" id="lbCounter"></div>
+</div>
+
 <!-- ============================= CONFIRM MODAL ============================= -->
 <div class="overlay" id="confirmOverlay">
   <div class="modal confirm-modal" id="confirmModal">
@@ -818,6 +909,18 @@ const SUBJECTS = {
   CHEM: {label:'Chemistry', color:'var(--chem)'},
   MATH: {label:'Maths',     color:'var(--math)'}
 };
+const MISTAKE_TYPE_COLORS = {
+  'Conceptual Gap': 'var(--mt-concept)',
+  'Silly / Calculation Error': 'var(--mt-silly)',
+  'Misread Question': 'var(--mt-misread)',
+  'Time Pressure': 'var(--mt-time)',
+  'Formula Mixed Up': 'var(--mt-formula)',
+  'Other': 'var(--mt-other)'
+};
+function mistakeChipHtml(m){
+  const c = MISTAKE_TYPE_COLORS[m] || 'var(--mt-other)';
+  return `<span class="mini-chip" style="--tag-c:${c}">${esc(m)}</span>`;
+}
 const DRIVE_FOLDER_NAME = 'JEE Mistake Notebook';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
 // Optional: once you have your own Google OAuth Client ID (Settings > Google Drive sync
@@ -1067,12 +1170,18 @@ async function addDraftPhoto(kind, file){
   try{
     const compressed = await compressImage(file, 1800, 0.85);
     const tempKey = 'draft_' + kind + '_' + uid();
-    state.draftPhotos[kind].push({ tempKey, blob: compressed });
+    state.draftPhotos[kind].push({ tempKey, blob: compressed, mediaType:'image' });
     renderPhotoStrip(kind);
   }catch(err){
     console.error(err);
     toast('Could not add that photo — try a different one');
   }
+}
+function addDraftVideo(kind, file){
+  // Videos aren't run through the image-compression pipeline — stored as-is.
+  const tempKey = 'draft_' + kind + '_' + uid();
+  state.draftPhotos[kind].push({ tempKey, blob: file, mediaType:'video' });
+  renderPhotoStrip(kind);
 }
 function removeDraftPhoto(kind, tempKey){
   state.draftPhotos[kind] = state.draftPhotos[kind].filter(p => p.tempKey !== tempKey);
@@ -1084,13 +1193,24 @@ function renderPhotoStrip(kind){
   state.draftPhotos[kind].forEach(p=>{
     const div = document.createElement('div');
     div.className = 'photo-thumb';
-    const img = document.createElement('img');
-    img.src = URL.createObjectURL(p.blob);
+    if(p.mediaType === 'video'){
+      const v = document.createElement('video');
+      v.src = URL.createObjectURL(p.blob);
+      v.muted = true; v.playsInline = true; v.preload = 'metadata';
+      const badge = document.createElement('div');
+      badge.className = 'media-video-badge';
+      badge.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+      div.appendChild(v); div.appendChild(badge);
+    } else {
+      const img = document.createElement('img');
+      img.src = URL.createObjectURL(p.blob);
+      div.appendChild(img);
+    }
     const rm = document.createElement('button');
     rm.className = 'photo-remove';
     rm.innerHTML = '&times;';
     rm.onclick = (e)=>{ e.stopPropagation(); removeDraftPhoto(kind, p.tempKey); };
-    div.appendChild(img); div.appendChild(rm);
+    div.appendChild(rm);
     strip.appendChild(div);
   });
 }
@@ -1137,13 +1257,13 @@ async function hydrateExistingPhotosIntoDraft(existing){
   for(const p of existing.qPhotos){
     if(p.key){
       const rec = await idbGetBlob(p.key);
-      if(rec) state.draftPhotos.q.push({ tempKey: p.key, blob: rec.blob, existingRef: p });
+      if(rec) state.draftPhotos.q.push({ tempKey: p.key, blob: rec.blob, mediaType: p.type || 'image', existingRef: p });
     }
   }
   for(const p of existing.sPhotos){
     if(p.key){
       const rec = await idbGetBlob(p.key);
-      if(rec) state.draftPhotos.s.push({ tempKey: p.key, blob: rec.blob, existingRef: p });
+      if(rec) state.draftPhotos.s.push({ tempKey: p.key, blob: rec.blob, mediaType: p.type || 'image', existingRef: p });
     }
   }
   renderPhotoStrip('q'); renderPhotoStrip('s');
@@ -1205,15 +1325,22 @@ $('#statusToggle').addEventListener('click', (e)=>{
 });
 
 $('#qCameraBtn').onclick = ()=> $('#qCameraInput').click();
+$('#qVideoBtn').onclick = ()=> $('#qVideoInput').click();
 $('#qGalleryBtn').onclick = ()=> $('#qGalleryInput').click();
 $('#sCameraBtn').onclick = ()=> $('#sCameraInput').click();
+$('#sVideoBtn').onclick = ()=> $('#sVideoInput').click();
 $('#sGalleryBtn').onclick = ()=> $('#sGalleryInput').click();
 $('#qCameraInput').onchange = (e)=>{ handleFileInput('q', e.target.files); e.target.value=''; };
+$('#qVideoInput').onchange = (e)=>{ handleFileInput('q', e.target.files); e.target.value=''; };
 $('#qGalleryInput').onchange = (e)=>{ handleFileInput('q', e.target.files); e.target.value=''; };
 $('#sCameraInput').onchange = (e)=>{ handleFileInput('s', e.target.files); e.target.value=''; };
+$('#sVideoInput').onchange = (e)=>{ handleFileInput('s', e.target.files); e.target.value=''; };
 $('#sGalleryInput').onchange = (e)=>{ handleFileInput('s', e.target.files); e.target.value=''; };
 function handleFileInput(kind, fileList){
-  Array.from(fileList).forEach(f=>{ if(f.type.startsWith('image/')) addDraftPhoto(kind, f); });
+  Array.from(fileList).forEach(f=>{
+    if(f.type.startsWith('video/')) addDraftVideo(kind, f);
+    else if(f.type.startsWith('image/')) addDraftPhoto(kind, f);
+  });
 }
 
 /* ---- voice recording ---- */
@@ -1285,7 +1412,7 @@ $('#entryCloseBtn').onclick = ()=> hideOverlay('#entryOverlay');
 async function saveEntry(){
   if(!selectedSubject){ toast('Pick a subject'); return; }
   if(!$('#chapterInput').value.trim()){ toast('Add a chapter or topic'); return; }
-  if(state.draftPhotos.q.length === 0){ toast('Add at least one question photo'); return; }
+  if(state.draftPhotos.q.length === 0){ toast('Add at least one question photo or video'); return; }
 
   $('#entrySaveBtn').disabled = true;
   $('#entrySaveBtn').textContent = 'Saving…';
@@ -1360,12 +1487,17 @@ async function persistPhotoList(kind, entryId, previousRefs){
   for(let i=0;i<drafts.length;i++){
     const d = drafts[i];
     const key = entryId + '_' + kind + i;
-    await idbSetBlob(key, d.blob, 'image/jpeg');
-    const thumbBlob = await compressImage(d.blob, 320, 0.6);
-    const thumbKey = key + '_thumb';
-    await idbSetBlob(thumbKey, thumbBlob, 'image/jpeg');
     const prevRef = d.existingRef;
-    result.push({ key, thumbKey, driveId: prevRef ? prevRef.driveId : null });
+    if(d.mediaType === 'video'){
+      await idbSetBlob(key, d.blob, d.blob.type || 'video/mp4');
+      result.push({ key, thumbKey: null, type:'video', driveId: prevRef ? prevRef.driveId : null });
+    } else {
+      await idbSetBlob(key, d.blob, 'image/jpeg');
+      const thumbBlob = await compressImage(d.blob, 320, 0.6);
+      const thumbKey = key + '_thumb';
+      await idbSetBlob(thumbKey, thumbBlob, 'image/jpeg');
+      result.push({ key, thumbKey, type:'image', driveId: prevRef ? prevRef.driveId : null });
+    }
   }
   // clean up any leftover blobs from a shrunk list on edit
   if(previousRefs){
@@ -1384,11 +1516,14 @@ async function persistPhotoList(kind, entryId, previousRefs){
 function openViewModal(entry){
   state.viewingId = entry.id;
   $('#viewChapter').textContent = entry.chapter;
+  const banner = $('#viewStatusBanner');
+  banner.className = 'status-banner ' + entry.status;
+  banner.textContent = entry.status === 'revision' ? '🟠 Needs revision' : '✅ Mastered — you\'ve got this one';
   const meta = $('#viewMetaRow');
   meta.innerHTML = `
     <span class="entry-subject-tag" style="position:static;--tag-c:${SUBJECTS[entry.subject].color}">${SUBJECTS[entry.subject].label}</span>
     ${entry.source ? `<span class="mini-chip">${esc(entry.source)}</span>` : ''}
-    ${entry.mistakeTypes.map(m=>`<span class="mini-chip">${esc(m)}</span>`).join('')}
+    ${entry.mistakeTypes.map(mistakeChipHtml).join('')}
     <span class="mini-chip">${new Date(entry.createdAt).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'})}</span>
   `;
 
@@ -1422,13 +1557,12 @@ async function resolveVoiceUrl(voice){
   return null;
 }
 
-async function renderLightbox(sel, photos){
+async function renderLightbox(sel, mediaItems){
   const strip = $(sel);
   strip.innerHTML = '';
-  for(const p of photos){
-    const img = document.createElement('img');
-    img.alt = 'photo';
-    strip.appendChild(img);
+  const resolved = [];
+  for(const p of mediaItems){
+    const type = p.type || 'image';
     let url = p.key ? await blobKeyToUrl(p.key) : null;
     if(!url && p.driveId && isDriveReady()){
       try{
@@ -1437,9 +1571,55 @@ async function renderLightbox(sel, photos){
         objectUrlCache.set(p.driveId, url);
       }catch(e){ console.error(e); }
     }
-    img.src = url || '';
+    resolved.push({ url: url || '', type });
+    const idx = resolved.length - 1;
+    const el = document.createElement(type === 'video' ? 'video' : 'img');
+    if(type === 'video'){ el.muted = true; el.playsInline = true; el.preload = 'metadata'; }
+    else { el.alt = 'photo'; }
+    el.src = url || '';
+    el.style.cursor = 'zoom-in';
+    el.addEventListener('click', ()=> openMediaLightbox(resolved, idx));
+    strip.appendChild(el);
   }
 }
+
+/* ---- fullscreen media lightbox (tap to enlarge) ---- */
+let lightboxItems = [];
+let lightboxIndex = 0;
+function openMediaLightbox(items, startIndex){
+  lightboxItems = items;
+  lightboxIndex = startIndex || 0;
+  renderLightboxStage();
+  $('#mediaLightbox').classList.add('show');
+}
+function closeMediaLightbox(){
+  $('#mediaLightbox').classList.remove('show');
+  $('#lbStage').innerHTML = '';
+}
+function renderLightboxStage(){
+  const stage = $('#lbStage');
+  stage.innerHTML = '';
+  const item = lightboxItems[lightboxIndex];
+  if(!item) return;
+  const el = document.createElement(item.type === 'video' ? 'video' : 'img');
+  if(item.type === 'video'){ el.controls = true; el.autoplay = true; el.playsInline = true; }
+  el.src = item.url;
+  stage.appendChild(el);
+  const multi = lightboxItems.length > 1;
+  $('#lbCounter').textContent = multi ? (lightboxIndex+1) + ' / ' + lightboxItems.length : '';
+  $('#lbPrevBtn').classList.toggle('hidden', !multi);
+  $('#lbNextBtn').classList.toggle('hidden', !multi);
+}
+$('#lbCloseBtn').onclick = closeMediaLightbox;
+$('#lbPrevBtn').onclick = ()=>{ lightboxIndex = (lightboxIndex - 1 + lightboxItems.length) % lightboxItems.length; renderLightboxStage(); };
+$('#lbNextBtn').onclick = ()=>{ lightboxIndex = (lightboxIndex + 1) % lightboxItems.length; renderLightboxStage(); };
+$('#mediaLightbox').addEventListener('click', (e)=>{ if(e.target.id === 'mediaLightbox' || e.target.id === 'lbStage') closeMediaLightbox(); });
+document.addEventListener('keydown', (e)=>{
+  if(!$('#mediaLightbox').classList.contains('show')) return;
+  if(e.key === 'Escape') closeMediaLightbox();
+  if(e.key === 'ArrowLeft' && lightboxItems.length > 1) $('#lbPrevBtn').click();
+  if(e.key === 'ArrowRight' && lightboxItems.length > 1) $('#lbNextBtn').click();
+});
 
 $('#viewCloseBtn').onclick = ()=> hideOverlay('#viewOverlay');
 $('#viewEditBtn').onclick = ()=>{
@@ -1528,8 +1708,9 @@ function renderGrid(){
     card.className = 'entry-card glass';
     card.dataset.id = entry.id;
     const firstPhoto = entry.qPhotos[0];
+    const isFirstVideo = firstPhoto && firstPhoto.type === 'video';
     card.innerHTML = `
-      <span class="entry-thumb-holder">${firstPhoto ? '' : ''}</span>
+      <span class="entry-thumb-holder"></span>
       <span class="entry-subject-tag" style="--tag-c:${SUBJECTS[entry.subject].color}">${SUBJECTS[entry.subject].label}</span>
       <span class="entry-status-dot ${entry.status}"></span>
       ${entry.pendingUpload ? '<span class="pending-badge" title="Not yet synced to Drive">⏳</span>' : ''}
@@ -1539,16 +1720,24 @@ function renderGrid(){
           <span>${new Date(entry.createdAt).toLocaleDateString(undefined,{day:'numeric',month:'short'})}</span>
           ${entry.source ? `<span>· ${esc(entry.source)}</span>` : ''}
         </div>
-        ${entry.mistakeTypes.length ? `<div class="entry-chips">${entry.mistakeTypes.slice(0,2).map(m=>`<span class="mini-chip">${esc(m)}</span>`).join('')}</div>` : ''}
+        ${entry.mistakeTypes.length ? `<div class="entry-chips">${entry.mistakeTypes.slice(0,2).map(mistakeChipHtml).join('')}</div>` : ''}
         ${entry.note ? `<div class="entry-note-preview">${esc(entry.note)}</div>` : ''}
       </div>
     `;
     const holder = card.querySelector('.entry-thumb-holder');
-    const placeholder = document.createElement('div');
-    placeholder.className = 'entry-thumb-placeholder';
-    placeholder.innerHTML = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M4 16.5 8.5 12l3 3L17 9.5 20 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><rect x="3" y="4" width="18" height="16" rx="2.5" stroke="currentColor" stroke-width="1.6"/></svg>';
-    holder.replaceWith(placeholder);
-    card.insertBefore(placeholder, card.firstChild);
+    if(isFirstVideo){
+      const placeholder = document.createElement('div');
+      placeholder.className = 'video-thumb-placeholder';
+      placeholder.innerHTML = '<svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><span>Video</span>';
+      holder.replaceWith(placeholder);
+      card.insertBefore(placeholder, card.firstChild);
+    } else {
+      const placeholder = document.createElement('div');
+      placeholder.className = 'entry-thumb-placeholder';
+      placeholder.innerHTML = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M4 16.5 8.5 12l3 3L17 9.5 20 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><rect x="3" y="4" width="18" height="16" rx="2.5" stroke="currentColor" stroke-width="1.6"/></svg>';
+      holder.replaceWith(placeholder);
+      card.insertBefore(placeholder, card.firstChild);
+    }
 
     card.onclick = ()=> openViewModal(entry);
     grid.appendChild(card);
@@ -1564,7 +1753,7 @@ async function onCardVisible(entriesObs){
     const entry = state.entries.find(e=>e.id===id);
     if(!entry) continue;
     const photo = entry.qPhotos[0];
-    if(!photo) continue;
+    if(!photo || photo.type === 'video') continue;
     let url = photo.thumbKey ? await blobKeyToUrl(photo.thumbKey) : (photo.key ? await blobKeyToUrl(photo.key) : null);
     if(!url && photo.driveId && isDriveReady()){
       try{
@@ -1966,7 +2155,12 @@ function updateSyncPill(mode){
 }
 
 function maybeSync(){
-  if(isDriveReady() && navigator.onLine) syncWithDrive();
+  // Only auto-sync in the background while we already hold a live token —
+  // never silently try to re-authenticate, since that's exactly what causes
+  // an unexpected popup. If we're not currently connected, the entry just
+  // stays saved locally (pendingUpload stays true) until the user taps
+  // "Sign in with Google" or "Sync now" themselves.
+  if(isDriveReady() && navigator.onLine && accessToken && Date.now() < tokenExpiry) syncWithDrive();
 }
 
 async function syncWithDrive(){
@@ -2026,7 +2220,7 @@ function stripLocalFields(entry){
   const clone = JSON.parse(JSON.stringify(entry));
   delete clone.pendingUpload;
   delete clone.remoteOnly;
-  const stripPhoto = p => ({ driveId: p.driveId });
+  const stripPhoto = p => ({ driveId: p.driveId, type: p.type || 'image' });
   clone.qPhotos = entry.qPhotos.map(stripPhoto);
   clone.sPhotos = entry.sPhotos.map(stripPhoto);
   clone.voice = entry.voice ? { driveId: entry.voice.driveId, mime: entry.voice.mime } : null;
@@ -2037,13 +2231,19 @@ async function pushEntryMedia(entry, folderId){
   for(const p of entry.qPhotos){
     if(!p.driveId && p.key){
       const rec = await idbGetBlob(p.key);
-      if(rec) p.driveId = await uploadMediaBlob(entry.id + '_q.jpg', rec.blob, 'image/jpeg', folderId);
+      if(rec){
+        const isVideo = p.type === 'video';
+        p.driveId = await uploadMediaBlob(entry.id + (isVideo ? '_q.mp4' : '_q.jpg'), rec.blob, rec.mime || (isVideo ? 'video/mp4' : 'image/jpeg'), folderId);
+      }
     }
   }
   for(const p of entry.sPhotos){
     if(!p.driveId && p.key){
       const rec = await idbGetBlob(p.key);
-      if(rec) p.driveId = await uploadMediaBlob(entry.id + '_s.jpg', rec.blob, 'image/jpeg', folderId);
+      if(rec){
+        const isVideo = p.type === 'video';
+        p.driveId = await uploadMediaBlob(entry.id + (isVideo ? '_s.mp4' : '_s.jpg'), rec.blob, rec.mime || (isVideo ? 'video/mp4' : 'image/jpeg'), folderId);
+      }
     }
   }
   if(entry.voice && !entry.voice.driveId && entry.voice.key){
@@ -2052,7 +2252,7 @@ async function pushEntryMedia(entry, folderId){
   }
 }
 
-window.addEventListener('online', ()=>{ if(isDriveReady()) syncWithDrive(); });
+window.addEventListener('online', ()=>{ if(isDriveReady() && accessToken && Date.now() < tokenExpiry) syncWithDrive(); });
 
 /* ============================================================
    INIT
@@ -2062,16 +2262,13 @@ async function init(){
   state.entries = loadEntries();
   renderGrid();
 
+  // Prepare the Drive client (cheap, no network call, no popup) so the
+  // sign-in button works instantly — but never request a token
+  // automatically. A token is only ever requested in direct response to
+  // the user tapping "Sign in with Google" or "Sync now".
   if(isDriveReady()){
-    try{
-      await initDrive(settings.clientId);
-      await ensureToken();
-      updateSyncPill('syncing');
-      await syncWithDrive();
-    }catch(err){
-      console.warn('Drive auto-connect needs a fresh sign-in click', err);
-      updateSyncPill('local');
-    }
+    try{ await initDrive(settings.clientId); }
+    catch(err){ console.warn('Drive client failed to initialize', err); }
   }
   refreshDriveSettingsUI();
 }
