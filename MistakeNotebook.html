@@ -522,6 +522,12 @@
   }
   .lb-prev{ left:14px; } .lb-next{ right:14px; }
   .lb-nav.hidden{ display:none; }
+  .lb-spinner{
+    width:34px; height:34px; border-radius:50%;
+    border:3px solid rgba(255,255,255,0.25); border-top-color:#fff;
+    animation: lbSpin .8s linear infinite;
+  }
+  @keyframes lbSpin{ to{ transform:rotate(360deg); } }
   .lb-counter{
     position:absolute; bottom:18px; left:50%; transform:translateX(-50%);
     font-size:12px; font-weight:650; color:rgba(255,255,255,0.75);
@@ -1517,7 +1523,7 @@ async function persistPhotoList(kind, entryId, previousRefs){
 /* ============================================================
    VIEW MODAL
 ============================================================ */
-function openViewModal(entry){
+function populateViewModal(entry){
   state.viewingId = entry.id;
   $('#viewChapter').textContent = entry.chapter;
   const banner = $('#viewStatusBanner');
@@ -1531,9 +1537,9 @@ function openViewModal(entry){
     <span class="mini-chip">${new Date(entry.createdAt).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'})}</span>
   `;
 
-  renderLightbox('#viewQPhotos', entry.qPhotos);
+  renderLightboxStrip('#viewQPhotos', entry, 0);
   const sBlock = $('#viewSolutionBlock');
-  if(entry.sPhotos.length){ sBlock.style.display=''; renderLightbox('#viewSPhotos', entry.sPhotos); }
+  if(entry.sPhotos.length){ sBlock.style.display=''; renderLightboxStrip('#viewSPhotos', entry, entry.qPhotos.length); }
   else sBlock.style.display = 'none';
 
   const noteBlock = $('#viewNoteBlock');
@@ -1547,6 +1553,9 @@ function openViewModal(entry){
   } else voiceBlock.style.display = 'none';
 
   $('#viewToggleStatusBtn').textContent = entry.status === 'revision' ? 'Mark as mastered' : 'Mark as needs revision';
+}
+function openViewModal(entry){
+  populateViewModal(entry);
   showOverlay('#viewOverlay');
 }
 
@@ -1561,47 +1570,79 @@ async function resolveVoiceUrl(voice){
   return null;
 }
 
-async function renderLightbox(sel, mediaItems){
+async function resolveMediaItem(p){
+  const type = p.type || 'image';
+  let url = p.key ? await blobKeyToUrl(p.key) : null;
+  if(!url && p.driveId && isDriveReady()){
+    try{
+      const blob = await downloadDriveBlob(p.driveId);
+      url = URL.createObjectURL(blob);
+      objectUrlCache.set(p.driveId, url);
+    }catch(e){ console.error(e); }
+  }
+  return { url: url || '', type };
+}
+async function resolveEntryMedia(entry){
+  const items = [];
+  for(const p of entry.qPhotos) items.push(await resolveMediaItem(p));
+  for(const p of entry.sPhotos) items.push(await resolveMediaItem(p));
+  return items;
+}
+
+async function renderLightboxStrip(sel, entry, indexOffset){
   const strip = $(sel);
   strip.innerHTML = '';
-  const resolved = [];
-  for(const p of mediaItems){
+  const refs = indexOffset === 0 ? entry.qPhotos : entry.sPhotos;
+  for(let i=0;i<refs.length;i++){
+    const p = refs[i];
     const type = p.type || 'image';
-    let url = p.key ? await blobKeyToUrl(p.key) : null;
-    if(!url && p.driveId && isDriveReady()){
-      try{
-        const blob = await downloadDriveBlob(p.driveId);
-        url = URL.createObjectURL(blob);
-        objectUrlCache.set(p.driveId, url);
-      }catch(e){ console.error(e); }
-    }
-    resolved.push({ url: url || '', type });
-    const idx = resolved.length - 1;
+    const resolved = await resolveMediaItem(p);
     const el = document.createElement(type === 'video' ? 'video' : 'img');
     if(type === 'video'){ el.muted = true; el.playsInline = true; el.preload = 'metadata'; }
     else { el.alt = 'photo'; }
-    el.src = url || '';
+    el.src = resolved.url;
     el.style.cursor = 'zoom-in';
-    el.addEventListener('click', ()=> openMediaLightbox(resolved, idx));
+    const combinedIndex = indexOffset + i;
+    el.addEventListener('click', ()=> openMediaLightboxForEntry(entry, combinedIndex));
     strip.appendChild(el);
   }
 }
 
-/* ---- fullscreen media lightbox: tap to enlarge, pinch/wheel zoom, pan,
-   swipe between items, double-tap/double-click to zoom ---- */
-let lightboxItems = [];
-let lightboxIndex = 0;
+/* ---- fullscreen media lightbox ----
+   Browses one entry's Question→Solution media as a single sequence, then
+   rolls seamlessly into the next/previous entry (same order as the current
+   grid) once you go past either end — so "next" from an entry's last photo
+   lands on the next entry's first Question photo, and so on. Tap to
+   enlarge, pinch/wheel zoom, drag to pan while zoomed, swipe or arrow keys
+   to move, double-tap/double-click to zoom. */
+let lbEntryList = [];
+let lbEntryIndex = 0;
+let lbItems = [];
+let lbItemIndex = 0;
+let lbBusy = false;
 let lbScale = 1, lbPanX = 0, lbPanY = 0;
 
-function openMediaLightbox(items, startIndex){
-  lightboxItems = items;
-  lightboxIndex = startIndex || 0;
-  renderLightboxStage();
+function openMediaLightboxForEntry(entry, itemIndex){
+  lbEntryList = getFilteredEntries();
+  lbEntryIndex = lbEntryList.findIndex(e => e.id === entry.id);
+  if(lbEntryIndex === -1){ lbEntryList = [entry]; lbEntryIndex = 0; }
+  lbItemIndex = itemIndex;
   $('#mediaLightbox').classList.add('show');
+  loadLightboxEntry(false);
 }
 function closeMediaLightbox(){
   $('#mediaLightbox').classList.remove('show');
   $('#lbStage').innerHTML = '';
+}
+async function loadLightboxEntry(fromNavigation){
+  const entry = lbEntryList[lbEntryIndex];
+  if(!entry) return;
+  lbBusy = true;
+  $('#lbStage').innerHTML = '<div class="lb-spinner"></div>';
+  lbItems = await resolveEntryMedia(entry);
+  lbBusy = false;
+  if(fromNavigation) populateViewModal(entry); // keep the modal behind it in sync as we roll across entries
+  renderLightboxStage();
 }
 function applyLbTransform(withTransition){
   const media = $('#lbStage').querySelector('img, video');
@@ -1616,7 +1657,7 @@ function resetLbZoom(withTransition){
 function renderLightboxStage(){
   const stage = $('#lbStage');
   stage.innerHTML = '';
-  const item = lightboxItems[lightboxIndex];
+  const item = lbItems[lbItemIndex];
   if(!item) return;
   const el = document.createElement(item.type === 'video' ? 'video' : 'img');
   if(item.type === 'video'){ el.controls = true; el.autoplay = true; el.playsInline = true; }
@@ -1625,13 +1666,35 @@ function renderLightboxStage(){
   stage.appendChild(el);
   lbScale = 1; lbPanX = 0; lbPanY = 0;
   applyLbTransform(false);
-  const multi = lightboxItems.length > 1;
-  $('#lbCounter').textContent = multi ? (lightboxIndex+1) + ' / ' + lightboxItems.length : '';
-  $('#lbPrevBtn').classList.toggle('hidden', !multi);
-  $('#lbNextBtn').classList.toggle('hidden', !multi);
+  const entry = lbEntryList[lbEntryIndex];
+  const canNav = lbEntryList.length > 1 || lbItems.length > 1;
+  $('#lbCounter').textContent = entry ? `${entry.chapter} — ${lbItemIndex+1}/${lbItems.length}` : '';
+  $('#lbPrevBtn').classList.toggle('hidden', !canNav);
+  $('#lbNextBtn').classList.toggle('hidden', !canNav);
 }
-function lbGoPrev(){ lightboxIndex = (lightboxIndex - 1 + lightboxItems.length) % lightboxItems.length; renderLightboxStage(); }
-function lbGoNext(){ lightboxIndex = (lightboxIndex + 1) % lightboxItems.length; renderLightboxStage(); }
+async function lbGoNext(){
+  if(lbBusy) return;
+  if(lbItemIndex < lbItems.length - 1){
+    lbItemIndex++;
+    renderLightboxStage();
+  } else if(lbEntryList.length > 1){
+    lbEntryIndex = (lbEntryIndex + 1) % lbEntryList.length;
+    lbItemIndex = 0;
+    await loadLightboxEntry(true);
+  }
+}
+async function lbGoPrev(){
+  if(lbBusy) return;
+  if(lbItemIndex > 0){
+    lbItemIndex--;
+    renderLightboxStage();
+  } else if(lbEntryList.length > 1){
+    lbEntryIndex = (lbEntryIndex - 1 + lbEntryList.length) % lbEntryList.length;
+    const prevEntry = lbEntryList[lbEntryIndex];
+    lbItemIndex = Math.max(0, prevEntry.qPhotos.length + prevEntry.sPhotos.length - 1);
+    await loadLightboxEntry(true);
+  }
+}
 $('#lbCloseBtn').onclick = closeMediaLightbox;
 $('#lbPrevBtn').onclick = lbGoPrev;
 $('#lbNextBtn').onclick = lbGoNext;
@@ -1639,14 +1702,16 @@ $('#mediaLightbox').addEventListener('click', (e)=>{ if(e.target.id === 'mediaLi
 document.addEventListener('keydown', (e)=>{
   if(!$('#mediaLightbox').classList.contains('show')) return;
   if(e.key === 'Escape') closeMediaLightbox();
-  if(e.key === 'ArrowLeft' && lightboxItems.length > 1) lbGoPrev();
-  if(e.key === 'ArrowRight' && lightboxItems.length > 1) lbGoNext();
+  if(e.key === 'ArrowRight') lbGoNext();
+  if(e.key === 'ArrowLeft') lbGoPrev();
 });
 
 /* Gestures. Real-time drag/pinch tracking uses no CSS transition (must feel
    1:1 with your fingers to feel smooth); snapping back to rest or jumping to
    a double-tap zoom level uses a short eased transition — that combination
-   is what makes it feel like a proper photo viewer instead of a raw image. */
+   is what makes it feel like a proper photo viewer instead of a raw image.
+   Swipe direction: dragging right moves forward (Question → Solution →
+   next entry), dragging left moves back — matching how the arrow keys work. */
 const lbStageEl = $('#lbStage');
 let lbTouchMode = null; // 'pinch' | 'pan' | 'swipe'
 let lbPinchStartDist = 0, lbPinchStartScale = 1;
@@ -1654,7 +1719,7 @@ let lbPanStartX = 0, lbPanStartY = 0, lbPanOriginX = 0, lbPanOriginY = 0;
 let lbSwipeStartX = 0, lbSwipeStartY = 0;
 let lbLastTapTime = 0, lbLastTapX = 0, lbLastTapY = 0;
 function lbTouchDist(t1, t2){ return Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY); }
-function lbCurrentIsVideo(){ const it = lightboxItems[lightboxIndex]; return it && it.type === 'video'; }
+function lbCurrentIsVideo(){ const it = lbItems[lbItemIndex]; return it && it.type === 'video'; }
 
 lbStageEl.addEventListener('touchstart', (e)=>{
   if(e.touches.length === 2 && !lbCurrentIsVideo()){
@@ -1696,8 +1761,8 @@ lbStageEl.addEventListener('touchend', (e)=>{
   if(lbTouchMode === 'swipe'){
     const endX = e.changedTouches[0].clientX, endY = e.changedTouches[0].clientY;
     const dx = endX - lbSwipeStartX, dy = endY - lbSwipeStartY;
-    if(lightboxItems.length > 1 && Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.5){
-      if(dx < 0) lbGoNext(); else lbGoPrev();
+    if(Math.abs(dx) > 32 && Math.abs(dx) > Math.abs(dy) * 1.15){
+      if(dx > 0) lbGoNext(); else lbGoPrev();
     } else if(!lbCurrentIsVideo()){
       const now = Date.now();
       const closeEnough = Math.abs(endX - lbLastTapX) < 30 && Math.abs(endY - lbLastTapY) < 30;
