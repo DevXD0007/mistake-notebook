@@ -1719,13 +1719,16 @@ async function ensureLbItemResolved(i){
   if(!lbItems[i]) lbItems[i] = await resolveMediaItem(lbRefs[i]);
   return lbItems[i];
 }
+let lbNavToken = 0;
 async function showLbItem(i){
   lbItemIndex = i;
+  const myToken = ++lbNavToken;
   if(lbItems[i]){
     renderLightboxStage(lbItems[i]);
   } else {
     $('#lbStage').innerHTML = '<div class="lb-spinner"></div>';
     const item = await ensureLbItemResolved(i);
+    if(myToken !== lbNavToken) return; // a newer tap/swipe happened meanwhile — discard this stale result
     renderLightboxStage(item);
   }
 }
@@ -2723,7 +2726,18 @@ init();
 
 if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('sw.js').catch(()=>{ /* offline caching unavailable, app still works fine */ });
+    navigator.serviceWorker.register('sw.js').then(reg=>{
+      reg.update(); // check for a newer version right away instead of waiting
+    }).catch(()=>{ /* offline caching unavailable, app still works fine */ });
+  });
+  // If a newer service worker takes over (because this file was updated and
+  // re-uploaded), reload once automatically so this device never gets stuck
+  // showing an old cached version — e.g. one from before Drive was set up.
+  let swAlreadyRefreshed = false;
+  navigator.serviceWorker.addEventListener('controllerchange', ()=>{
+    if(swAlreadyRefreshed) return;
+    swAlreadyRefreshed = true;
+    window.location.reload();
   });
 }
 

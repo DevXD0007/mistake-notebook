@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mistake-notebook-v1';
+const CACHE_NAME = 'mistake-notebook-v2';
 const APP_SHELL = [
   './MistakeNotebook.html',
   './manifest.json',
