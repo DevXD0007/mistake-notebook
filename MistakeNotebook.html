@@ -537,6 +537,7 @@
   .lb-annot-bar{
     position:absolute; left:50%; bottom:22px; transform:translateX(-50%) translateY(14px) scale(.95);
     display:flex; align-items:center; gap:9px; padding:9px 12px; border-radius:999px;
+    flex-wrap:wrap; justify-content:center; max-width:94vw;
     background: rgba(28,30,42,0.5);
     backdrop-filter: blur(28px) saturate(190%);
     -webkit-backdrop-filter: blur(28px) saturate(190%);
@@ -547,7 +548,8 @@
     z-index:20;
   }
   .media-lightbox.annotating .lb-annot-bar{ opacity:1; pointer-events:auto; transform:translateX(-50%) translateY(0) scale(1); }
-  .lb-annot-swatches{ display:flex; gap:6px; padding-right:6px; border-right:1px solid rgba(255,255,255,0.16); margin-right:2px; }
+  .lb-annot-group{ display:flex; align-items:center; gap:6px; padding-right:8px; border-right:1px solid rgba(255,255,255,0.16); margin-right:2px; }
+  .lb-annot-group:last-of-type{ border-right:none; margin-right:0; padding-right:0; }
   .lb-annot-swatch{
     width:24px; height:24px; border-radius:50%; border:2px solid rgba(255,255,255,0.45);
     background: var(--sw-c); cursor:pointer; padding:0; flex-shrink:0;
@@ -555,6 +557,14 @@
   }
   .lb-annot-swatch:hover{ transform: scale(1.16); }
   .lb-annot-swatch.sel{ transform: scale(1.26); border-color:#fff; box-shadow: 0 0 0 3px rgba(255,255,255,0.22); }
+  .lb-annot-custom{
+    position:relative; overflow:hidden; display:block;
+    background: conic-gradient(from 0deg, #ff3b30, #ffcc00, #34c759, #0a84ff, #af52de, #ff3b30);
+  }
+  .lb-annot-custom input[type="color"]{
+    position:absolute; inset:-6px; width:calc(100% + 12px); height:calc(100% + 12px);
+    border:none; padding:0; cursor:pointer; opacity:0;
+  }
   .lb-annot-tool{
     width:30px; height:30px; border-radius:50%; border:none; background: rgba(255,255,255,0.10);
     color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0;
@@ -562,9 +572,21 @@
   }
   .lb-annot-tool:hover{ background: rgba(255,255,255,0.2); }
   .lb-annot-tool.sel{ background: rgba(255,255,255,0.34); }
-  .lb-annot-tool:active, .lb-annot-swatch:active{ transform: scale(0.86); }
+  .lb-annot-tool:active, .lb-annot-swatch:active, .lb-annot-size:active{ transform: scale(0.86); }
+  .lb-annot-size{
+    width:26px; height:26px; border-radius:50%; border:none; background: rgba(255,255,255,0.10);
+    display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;
+    transition: background .16s ease, transform .16s ease;
+  }
+  .lb-annot-size:hover{ background: rgba(255,255,255,0.2); }
+  .lb-annot-size.sel{ background: rgba(255,255,255,0.34); }
+  .lb-size-dot{ border-radius:50%; background:#fff; display:block; }
+  .lb-size-s{ width:5px; height:5px; }
+  .lb-size-m{ width:9px; height:9px; }
+  .lb-size-l{ width:13px; height:13px; }
   @media (max-width:600px){
-    .lb-annot-bar{ bottom:14px; padding:8px 10px; gap:7px; max-width:94vw; }
+    .lb-annot-bar{ bottom:14px; padding:8px 10px; gap:6px; }
+    .lb-annot-group{ padding-right:6px; }
     .lb-annot-swatch{ width:22px; height:22px; }
   }
   .lb-spinner{
@@ -940,17 +962,31 @@
   <div class="lb-counter" id="lbCounter"></div>
 
   <div class="lb-annot-bar" id="lbAnnotBar">
-    <div class="lb-annot-swatches" id="lbAnnotSwatches">
+    <div class="lb-annot-group" id="lbAnnotTools">
+      <button class="lb-annot-tool sel" data-tool="pen" title="Pen"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <button class="lb-annot-tool" data-tool="highlighter" title="Highlighter"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="m17 3 4 4-9 9H8v-4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M5 21h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+      <button class="lb-annot-tool" data-tool="eraser" title="Eraser"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="m16 3 5 5-9.5 9.5H7L2.5 13Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M8 21h13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+    </div>
+    <div class="lb-annot-group" id="lbAnnotSizes">
+      <button class="lb-annot-size" data-size="1" title="Thin"><span class="lb-size-dot lb-size-s"></span></button>
+      <button class="lb-annot-size sel" data-size="2" title="Medium"><span class="lb-size-dot lb-size-m"></span></button>
+      <button class="lb-annot-size" data-size="3" title="Thick"><span class="lb-size-dot lb-size-l"></span></button>
+    </div>
+    <div class="lb-annot-group" id="lbAnnotSwatches">
       <button class="lb-annot-swatch sel" data-color="#ff3b30" style="--sw-c:#ff3b30" title="Red"></button>
       <button class="lb-annot-swatch" data-color="#ffcc00" style="--sw-c:#ffcc00" title="Yellow"></button>
       <button class="lb-annot-swatch" data-color="#34c759" style="--sw-c:#34c759" title="Green"></button>
       <button class="lb-annot-swatch" data-color="#0a84ff" style="--sw-c:#0a84ff" title="Blue"></button>
       <button class="lb-annot-swatch" data-color="#ffffff" style="--sw-c:#ffffff" title="White"></button>
       <button class="lb-annot-swatch" data-color="#1c1c1e" style="--sw-c:#1c1c1e" title="Black"></button>
+      <label class="lb-annot-swatch lb-annot-custom" id="lbCustomSwatch" title="Custom color">
+        <input type="color" id="lbCustomColor" value="#ff3b30">
+      </label>
     </div>
-    <button class="lb-annot-tool" id="lbEraserBtn" title="Eraser"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="m16 3 5 5-9.5 9.5H7L2.5 13Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M8 21h13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
-    <button class="lb-annot-tool" id="lbUndoBtn" title="Undo"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M9 7 4 12l5 5M4 12h11a5 5 0 0 1 0 10h-1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-    <button class="lb-annot-tool" id="lbClearBtn" title="Clear all"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0-.7 12.1a2 2 0 0 1-2 1.9H9.7a2 2 0 0 1-2-1.9L7 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <div class="lb-annot-group">
+      <button class="lb-annot-tool" id="lbUndoBtn" title="Undo"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M9 7 4 12l5 5M4 12h11a5 5 0 0 1 0 10h-1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <button class="lb-annot-tool" id="lbClearBtn" title="Clear all"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0-.7 12.1a2 2 0 0 1-2 1.9H9.7a2 2 0 0 1-2-1.9L7 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
     <button class="btn ghost sm" id="lbCancelAnnotBtn">Cancel</button>
     <button class="btn primary sm" id="lbSaveAnnotBtn">Save</button>
   </div>
@@ -1899,30 +1935,64 @@ lbStageEl.addEventListener('dblclick', ()=>{
 
 /* ---- Annotate: freehand markup saved as a transparent overlay PNG, kept
    fully separate from the original photo so it can be reloaded and edited
-   further later, on any device — never destructively baked into the photo. */
+   further later, on any device — never destructively baked into the photo.
+
+   Performance note: each new point is drawn as its own tiny segment (moveTo
+   the previous point, lineTo the new one, stroke just that). The earlier
+   version kept extending one long path and called stroke() on the whole
+   thing every pointermove — Canvas2D re-rasterizes the *entire* current path
+   on every stroke() call, so that got slower and slower the longer a line
+   went on. Per-segment strokes are O(1) per move instead of O(n), which is
+   what actually removes the lag — not a setting, an algorithm fix. */
 let lbAnnotMode = false;
 let lbAnnotColor = '#ff3b30';
-let lbAnnotTool = 'pen';
+let lbAnnotTool = 'pen';   // 'pen' | 'highlighter' | 'eraser'
+let lbAnnotSize = 2;       // 1=thin, 2=medium, 3=thick
 let lbAnnotStrokes = [];
 let lbAnnotDrawing = false;
 let lbAnnotCtx = null;
 let lbAnnotBaseImg = null;
 let lbAnnotCssW = 0, lbAnnotCssH = 0;
 
+const LB_ANNOT_SIZES = { pen:[2,4,7], highlighter:[10,16,24], eraser:[14,22,34] };
+function lbAnnotWidth(tool, size, pressure){
+  const base = (LB_ANNOT_SIZES[tool] || LB_ANNOT_SIZES.pen)[size-1] || LB_ANNOT_SIZES.pen[1];
+  if(tool !== 'pen') return base;
+  const p = pressure != null ? pressure : 0.5;
+  return base * (0.55 + p * 0.9); // pressure-sensitive taper for the pen, steady width for highlighter/eraser
+}
+function lbAnnotDrawSegment(from, to, stroke){
+  lbAnnotCtx.globalCompositeOperation = stroke.tool === 'eraser' ? 'destination-out' : 'source-over';
+  lbAnnotCtx.globalAlpha = stroke.tool === 'highlighter' ? 0.35 : 1;
+  lbAnnotCtx.strokeStyle = stroke.color;
+  lbAnnotCtx.lineWidth = lbAnnotWidth(stroke.tool, stroke.size, to.pressure);
+  lbAnnotCtx.beginPath();
+  lbAnnotCtx.moveTo(from.x, from.y);
+  lbAnnotCtx.lineTo(to.x, to.y);
+  lbAnnotCtx.stroke();
+  lbAnnotCtx.globalAlpha = 1;
+}
+function lbAnnotDrawDot(stroke){
+  const p = stroke.points[0];
+  lbAnnotCtx.globalCompositeOperation = stroke.tool === 'eraser' ? 'destination-out' : 'source-over';
+  lbAnnotCtx.globalAlpha = stroke.tool === 'highlighter' ? 0.35 : 1;
+  lbAnnotCtx.beginPath();
+  lbAnnotCtx.arc(p.x, p.y, lbAnnotWidth(stroke.tool, stroke.size, p.pressure)/2, 0, Math.PI*2);
+  lbAnnotCtx.fillStyle = stroke.color;
+  lbAnnotCtx.fill();
+  lbAnnotCtx.globalAlpha = 1;
+}
 function redrawAnnotCanvas(){
   if(!lbAnnotCtx) return;
   lbAnnotCtx.clearRect(0, 0, lbAnnotCssW, lbAnnotCssH);
   if(lbAnnotBaseImg){
     lbAnnotCtx.globalCompositeOperation = 'source-over';
+    lbAnnotCtx.globalAlpha = 1;
     lbAnnotCtx.drawImage(lbAnnotBaseImg, 0, 0, lbAnnotCssW, lbAnnotCssH);
   }
   lbAnnotStrokes.forEach(stroke=>{
-    lbAnnotCtx.globalCompositeOperation = stroke.tool === 'eraser' ? 'destination-out' : 'source-over';
-    lbAnnotCtx.strokeStyle = stroke.color;
-    lbAnnotCtx.lineWidth = stroke.tool === 'eraser' ? 18 : 4;
-    lbAnnotCtx.beginPath();
-    stroke.points.forEach((p,i)=>{ if(i===0) lbAnnotCtx.moveTo(p.x,p.y); else lbAnnotCtx.lineTo(p.x,p.y); });
-    lbAnnotCtx.stroke();
+    if(stroke.points.length < 2) lbAnnotDrawDot(stroke);
+    else for(let i=1;i<stroke.points.length;i++) lbAnnotDrawSegment(stroke.points[i-1], stroke.points[i], stroke);
   });
 }
 
@@ -1944,10 +2014,11 @@ async function enterAnnotMode(){
   canvas.style.top = (rect.top - stageRect.top) + 'px';
   canvas.style.width = rect.width + 'px';
   canvas.style.height = rect.height + 'px';
-  canvas.width = Math.round(rect.width * 2);
-  canvas.height = Math.round(rect.height * 2);
-  lbAnnotCtx = canvas.getContext('2d');
-  lbAnnotCtx.setTransform(2,0,0,2,0,0);
+  const dpr = Math.min(window.devicePixelRatio || 1, 2); // match the real screen density instead of always forcing 2x
+  canvas.width = Math.round(rect.width * dpr);
+  canvas.height = Math.round(rect.height * dpr);
+  lbAnnotCtx = canvas.getContext('2d', { desynchronized: true }); // hints the browser to skip a compositing step for lower-latency drawing
+  lbAnnotCtx.setTransform(dpr,0,0,dpr,0,0);
   lbAnnotCtx.lineCap = 'round'; lbAnnotCtx.lineJoin = 'round';
   lbAnnotStrokes = [];
   lbAnnotBaseImg = null;
@@ -1972,30 +2043,34 @@ function exitAnnotMode(){
 }
 function annotPos(e){
   const rect = lbAnnotCanvasEl.getBoundingClientRect();
-  return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  return { x: e.clientX - rect.left, y: e.clientY - rect.top, pressure: e.pressure > 0 ? e.pressure : 0.5 };
 }
 const lbAnnotCanvasEl = $('#lbAnnotCanvas');
 lbAnnotCanvasEl.addEventListener('pointerdown', (e)=>{
   if(!lbAnnotMode) return;
   lbAnnotDrawing = true;
   lbAnnotCanvasEl.setPointerCapture(e.pointerId);
-  const p = annotPos(e);
-  const stroke = { tool: lbAnnotTool, color: lbAnnotColor, points:[p] };
-  lbAnnotStrokes.push(stroke);
-  lbAnnotCtx.globalCompositeOperation = stroke.tool === 'eraser' ? 'destination-out' : 'source-over';
-  lbAnnotCtx.strokeStyle = stroke.color;
-  lbAnnotCtx.lineWidth = stroke.tool === 'eraser' ? 18 : 4;
-  lbAnnotCtx.beginPath();
-  lbAnnotCtx.moveTo(p.x, p.y);
+  lbAnnotStrokes.push({ tool: lbAnnotTool, color: lbAnnotColor, size: lbAnnotSize, points:[annotPos(e)] });
 });
 lbAnnotCanvasEl.addEventListener('pointermove', (e)=>{
   if(!lbAnnotMode || !lbAnnotDrawing) return;
-  const p = annotPos(e);
-  lbAnnotStrokes[lbAnnotStrokes.length-1].points.push(p);
-  lbAnnotCtx.lineTo(p.x, p.y);
-  lbAnnotCtx.stroke();
+  const stroke = lbAnnotStrokes[lbAnnotStrokes.length-1];
+  // getCoalescedEvents gives every real hardware sample since the last
+  // callback (styluses/S-Pen sample much faster than the browser dispatches
+  // events) — using them makes fast strokes smoother without extra lag.
+  const events = (e.getCoalescedEvents && e.getCoalescedEvents()) || [e];
+  (events.length ? events : [e]).forEach(ev=>{
+    const p = annotPos(ev);
+    const last = stroke.points[stroke.points.length-1];
+    stroke.points.push(p);
+    lbAnnotDrawSegment(last, p, stroke);
+  });
 });
-function endAnnotStroke(){ lbAnnotDrawing = false; }
+function endAnnotStroke(){
+  lbAnnotDrawing = false;
+  const stroke = lbAnnotStrokes[lbAnnotStrokes.length-1];
+  if(stroke && stroke.points.length === 1) lbAnnotDrawDot(stroke); // a tap with no drag leaves a dot, like a real pen
+}
 lbAnnotCanvasEl.addEventListener('pointerup', endAnnotStroke);
 lbAnnotCanvasEl.addEventListener('pointercancel', endAnnotStroke);
 
@@ -2011,18 +2086,31 @@ $('#lbUndoBtn').onclick = ()=>{
   lbAnnotStrokes.pop();
   redrawAnnotCanvas();
 };
-$('#lbEraserBtn').onclick = ()=>{
-  lbAnnotTool = lbAnnotTool === 'eraser' ? 'pen' : 'eraser';
-  $('#lbEraserBtn').classList.toggle('sel', lbAnnotTool === 'eraser');
-};
+$('#lbAnnotTools').addEventListener('click', (e)=>{
+  const btn = e.target.closest('.lb-annot-tool[data-tool]');
+  if(!btn) return;
+  lbAnnotTool = btn.dataset.tool;
+  $all('#lbAnnotTools .lb-annot-tool').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+});
+$('#lbAnnotSizes').addEventListener('click', (e)=>{
+  const btn = e.target.closest('.lb-annot-size');
+  if(!btn) return;
+  lbAnnotSize = parseInt(btn.dataset.size, 10);
+  $all('.lb-annot-size').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+});
 $('#lbAnnotSwatches').addEventListener('click', (e)=>{
-  const sw = e.target.closest('.lb-annot-swatch');
+  const sw = e.target.closest('.lb-annot-swatch[data-color]');
   if(!sw) return;
   lbAnnotColor = sw.dataset.color;
-  $all('.lb-annot-swatch').forEach(s=>s.classList.remove('sel'));
+  $all('#lbAnnotSwatches .lb-annot-swatch').forEach(s=>s.classList.remove('sel'));
   sw.classList.add('sel');
-  lbAnnotTool = 'pen';
-  $('#lbEraserBtn').classList.remove('sel');
+});
+$('#lbCustomColor').addEventListener('input', (e)=>{
+  lbAnnotColor = e.target.value;
+  $all('#lbAnnotSwatches .lb-annot-swatch').forEach(s=>s.classList.remove('sel'));
+  $('#lbCustomSwatch').classList.add('sel');
 });
 $('#lbSaveAnnotBtn').onclick = async ()=>{
   const ref = currentLbRef();

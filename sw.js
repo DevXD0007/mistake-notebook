@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mistake-notebook-v2';
+const CACHE_NAME = 'mistake-notebook-v3';
 const APP_SHELL = [
   './MistakeNotebook.html',
   './manifest.json',
@@ -23,12 +23,15 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Network-first: always prefer a fresh copy when online (so updates show up
-// right away), fall back to the cached app shell when offline.
+// Network-first, and *not* just in the sense of "try fetch() before cache" —
+// { cache: 'reload' } tells the browser to skip its own HTTP cache too and
+// genuinely ask the server, so a page can't get stuck on a stale copy from
+// ordinary HTTP caching underneath this logic. Falls back to the cached app
+// shell only when there's truly no network.
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   event.respondWith(
-    fetch(event.request)
+    fetch(event.request, { cache: 'reload' })
       .then((response) => {
         const copy = response.clone();
         caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
