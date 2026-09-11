@@ -1685,6 +1685,14 @@ async function resolveMediaItem(p){
       const blob = await downloadDriveBlob(p.driveId);
       url = URL.createObjectURL(blob);
       objectUrlCache.set(p.driveId, url);
+      // Save it locally so this exact photo never has to be re-fetched from
+      // Drive again on this device — first view costs the network round
+      // trip, every view after that is instant from disk.
+      if(!p.key){
+        p.key = 'remote_' + p.driveId;
+        await idbSetBlob(p.key, blob, blob.type || (type === 'video' ? 'video/mp4' : 'image/jpeg'));
+        persistEntries();
+      }
     }catch(e){ console.error(e); }
   }
   return { url: url || '', type };
@@ -1697,6 +1705,11 @@ async function resolveAnnotUrl(ref){
       const blob = await downloadDriveBlob(ref.annotDriveId);
       const url = URL.createObjectURL(blob);
       objectUrlCache.set(ref.annotDriveId, url);
+      if(!ref.annotKey){
+        ref.annotKey = 'remote_' + ref.annotDriveId + '_annot';
+        await idbSetBlob(ref.annotKey, blob, 'image/png');
+        persistEntries();
+      }
       return url;
     }catch(e){ console.error(e); }
   }
@@ -2049,8 +2062,9 @@ function exitAnnotMode(){
   lbAnnotBaseImg = null;
   lbAnnotStrokes = [];
 }
+let lbAnnotCanvasRect = null;
 function annotPos(e){
-  const rect = lbAnnotCanvasEl.getBoundingClientRect();
+  const rect = lbAnnotCanvasRect || lbAnnotCanvasEl.getBoundingClientRect();
   return { x: e.clientX - rect.left, y: e.clientY - rect.top, pressure: e.pressure > 0 ? e.pressure : 0.5 };
 }
 const lbAnnotCanvasEl = $('#lbAnnotCanvas');
@@ -2058,6 +2072,12 @@ lbAnnotCanvasEl.addEventListener('pointerdown', (e)=>{
   if(!lbAnnotMode) return;
   lbAnnotDrawing = true;
   lbAnnotCanvasEl.setPointerCapture(e.pointerId);
+  // Reading getBoundingClientRect() on every single point (as the old code
+  // did) forces a layout recalculation on every pointer sample — that's
+  // where most of the drawing latency was actually coming from, not the
+  // canvas drawing itself. The canvas doesn't move mid-stroke, so this only
+  // needs to happen once per stroke, not once per point.
+  lbAnnotCanvasRect = lbAnnotCanvasEl.getBoundingClientRect();
   lbAnnotStrokes.push({ tool: lbAnnotTool, color: lbAnnotColor, size: lbAnnotSize, points:[annotPos(e)] });
 });
 lbAnnotCanvasEl.addEventListener('pointermove', (e)=>{
