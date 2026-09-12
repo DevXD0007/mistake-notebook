@@ -599,7 +599,7 @@
      — reserving real space for it (instead of just floating it on top of a
      full-bleed image) is what stops it from creeping up and covering the
      photo, rather than merely overlapping it. */
-  .media-lightbox.annotating .lb-stage{ padding-bottom:150px; transition: padding .2s ease; }
+  .media-lightbox.annotating .lb-stage{ transition: padding .2s ease; }
   @media (max-width:600px){
     /* Nav buttons and the stage's image padding must agree with each other —
        a button positioned past where the image's clear area starts is what
@@ -610,7 +610,6 @@
     .lb-annot-bar{ bottom:14px; padding:8px 10px; gap:6px; }
     .lb-annot-group{ padding-right:6px; }
     .lb-annot-swatch{ width:22px; height:22px; }
-    .media-lightbox.annotating .lb-stage{ padding-bottom:190px; }
   }
 
   /* ---- video items in photo strips / lightbox strips ---- */
@@ -1982,26 +1981,28 @@ function lbAnnotWidth(tool, size, pressure){
   const p = pressure != null ? pressure : 0.5;
   return base * (0.55 + p * 0.9); // pressure-sensitive taper for the pen, steady width for highlighter/eraser
 }
-function lbAnnotDrawSegment(from, to, stroke){
+function lbAnnotApplyStrokeState(stroke){
   lbAnnotCtx.globalCompositeOperation = stroke.tool === 'eraser' ? 'destination-out' : 'source-over';
   lbAnnotCtx.globalAlpha = stroke.tool === 'highlighter' ? 0.35 : 1;
   lbAnnotCtx.strokeStyle = stroke.color;
+  lbAnnotCtx.fillStyle = stroke.color;
+}
+function lbAnnotDrawSegment(from, to, stroke){
+  // Composite mode/alpha/color are set once per stroke (see
+  // lbAnnotApplyStrokeState), not here — re-setting canvas state on every
+  // single point was itself a small but real chunk of the drawing latency.
   lbAnnotCtx.lineWidth = lbAnnotWidth(stroke.tool, stroke.size, to.pressure);
   lbAnnotCtx.beginPath();
   lbAnnotCtx.moveTo(from.x, from.y);
   lbAnnotCtx.lineTo(to.x, to.y);
   lbAnnotCtx.stroke();
-  lbAnnotCtx.globalAlpha = 1;
 }
 function lbAnnotDrawDot(stroke){
   const p = stroke.points[0];
-  lbAnnotCtx.globalCompositeOperation = stroke.tool === 'eraser' ? 'destination-out' : 'source-over';
-  lbAnnotCtx.globalAlpha = stroke.tool === 'highlighter' ? 0.35 : 1;
+  lbAnnotApplyStrokeState(stroke);
   lbAnnotCtx.beginPath();
   lbAnnotCtx.arc(p.x, p.y, lbAnnotWidth(stroke.tool, stroke.size, p.pressure)/2, 0, Math.PI*2);
-  lbAnnotCtx.fillStyle = stroke.color;
   lbAnnotCtx.fill();
-  lbAnnotCtx.globalAlpha = 1;
 }
 function redrawAnnotCanvas(){
   if(!lbAnnotCtx) return;
@@ -2012,6 +2013,7 @@ function redrawAnnotCanvas(){
     lbAnnotCtx.drawImage(lbAnnotBaseImg, 0, 0, lbAnnotCssW, lbAnnotCssH);
   }
   lbAnnotStrokes.forEach(stroke=>{
+    lbAnnotApplyStrokeState(stroke);
     if(stroke.points.length < 2) lbAnnotDrawDot(stroke);
     else for(let i=1;i<stroke.points.length;i++) lbAnnotDrawSegment(stroke.points[i-1], stroke.points[i], stroke);
   });
@@ -2026,6 +2028,12 @@ async function enterAnnotMode(){
 
   lbAnnotMode = true;
   $('#mediaLightbox').classList.add('annotating');
+  // Always start annotating from a clean, unzoomed view of the image — the
+  // canvas is sized to match the image's on-screen box exactly once, and
+  // trying to keep that aligned while pinch-zoom/pan is also active is what
+  // was causing the drawing surface to visually jump/misalign. Predictable
+  // beats clever here.
+  resetLbZoom(false);
 
   const canvas = $('#lbAnnotCanvas');
   const rect = media.getBoundingClientRect();
@@ -2078,7 +2086,9 @@ lbAnnotCanvasEl.addEventListener('pointerdown', (e)=>{
   // canvas drawing itself. The canvas doesn't move mid-stroke, so this only
   // needs to happen once per stroke, not once per point.
   lbAnnotCanvasRect = lbAnnotCanvasEl.getBoundingClientRect();
-  lbAnnotStrokes.push({ tool: lbAnnotTool, color: lbAnnotColor, size: lbAnnotSize, points:[annotPos(e)] });
+  const stroke = { tool: lbAnnotTool, color: lbAnnotColor, size: lbAnnotSize, points:[annotPos(e)] };
+  lbAnnotStrokes.push(stroke);
+  lbAnnotApplyStrokeState(stroke);
 });
 lbAnnotCanvasEl.addEventListener('pointermove', (e)=>{
   if(!lbAnnotMode || !lbAnnotDrawing) return;
@@ -2284,27 +2294,33 @@ function renderGrid(){
   });
 }
 
-async function onCardVisible(entriesObs){
-  for(const obs of entriesObs){
-    if(!obs.isIntersecting) continue;
-    gridObserver.unobserve(obs.target);
-    const id = obs.target.dataset.id;
-    const entry = state.entries.find(e=>e.id===id);
-    if(!entry) continue;
-    const photo = entry.qPhotos[0];
-    if(!photo || photo.type === 'video') continue;
-    let url = photo.thumbKey ? await blobKeyToUrl(photo.thumbKey) : (photo.key ? await blobKeyToUrl(photo.key) : null);
-    if(!url && photo.driveId && isDriveReady()){
-      try{
-        const blob = await downloadDriveBlob(photo.driveId);
-        const thumb = await compressImage(blob, 320, 0.6);
-        const thumbKey = entry.id + '_q0_thumb_r';
-        await idbSetBlob(thumbKey, thumb, 'image/jpeg');
-        photo.thumbKey = thumbKey;
-        persistEntries();
-        url = URL.createObjectURL(thumb);
-      }catch(e){ console.error(e); }
-    }
+function onCardVisible(entriesObs){
+  // Process every newly-visible card in parallel — the previous version
+  // awaited each one in sequence, so several thumbnails appearing on screen
+  // at once (e.g. right after opening the app) loaded one at a time instead
+  // of all together.
+  const visible = entriesObs.filter(o => o.isIntersecting);
+  visible.forEach(o => gridObserver.unobserve(o.target));
+  visible.forEach(loadCardThumbnail);
+}
+async function loadCardThumbnail(obs){
+  const id = obs.target.dataset.id;
+  const entry = state.entries.find(e=>e.id===id);
+  if(!entry) return;
+  const photo = entry.qPhotos[0];
+  if(!photo || photo.type === 'video') return;
+  let url = photo.thumbKey ? await blobKeyToUrl(photo.thumbKey) : (photo.key ? await blobKeyToUrl(photo.key) : null);
+  if(!url && photo.driveId && isDriveReady()){
+    try{
+      const blob = await downloadDriveBlob(photo.driveId);
+      const thumb = await compressImage(blob, 320, 0.6);
+      const thumbKey = entry.id + '_q0_thumb_r';
+      await idbSetBlob(thumbKey, thumb, 'image/jpeg');
+      photo.thumbKey = thumbKey;
+      persistEntries();
+      url = URL.createObjectURL(thumb);
+    }catch(e){ console.error(e); }
+  }
     if(url){
       const holder = obs.target.querySelector('.entry-thumb-placeholder');
       if(holder){
@@ -2315,7 +2331,6 @@ async function onCardVisible(entriesObs){
         holder.replaceWith(img);
       }
     }
-  }
 }
 
 /* ============================================================
