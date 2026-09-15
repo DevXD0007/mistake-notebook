@@ -510,17 +510,19 @@
     opacity:0; pointer-events:none; transition: opacity .2s ease;
   }
   .media-lightbox.show{ opacity:1; pointer-events:auto; }
-  .lb-stage{ width:100%; height:100%; display:flex; align-items:center; justify-content:center; padding:56px 64px; overflow:hidden; touch-action:none; }
+  .lb-stage{ position:relative; z-index:1; width:100%; height:100%; display:flex; align-items:center; justify-content:center; padding:56px 64px; overflow:hidden; touch-action:none; }
   .lb-stage img, .lb-stage video{ max-width:100%; max-height:100%; border-radius:12px; object-fit:contain; will-change:transform; user-select:none; -webkit-user-drag:none; }
   .lb-close{
     position:absolute; top:16px; right:16px; width:40px; height:40px; border-radius:50%;
     background: rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.15); color:#fff;
     display:flex; align-items:center; justify-content:center; cursor:pointer; backdrop-filter: blur(10px);
+    z-index:30;
   }
   .lb-nav{
     position:absolute; top:50%; transform:translateY(-50%); width:46px; height:46px; border-radius:50%;
     background: rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.15); color:#fff;
     display:flex; align-items:center; justify-content:center; cursor:pointer; backdrop-filter: blur(10px);
+    z-index:30;
   }
   .lb-prev{ left:14px; } .lb-next{ right:14px; }
   .lb-nav.hidden{ display:none; }
@@ -594,6 +596,7 @@
     position:absolute; bottom:18px; left:50%; transform:translateX(-50%);
     font-size:12px; font-weight:650; color:rgba(255,255,255,0.75);
     background: rgba(255,255,255,0.1); padding:5px 12px; border-radius:999px; backdrop-filter: blur(10px);
+    z-index:30;
   }
   /* The toolbar can wrap to 2-3 rows once it holds tools+sizes+colors+actions
      — reserving real space for it (instead of just floating it on top of a
@@ -1370,18 +1373,18 @@ function openEntryModal(existing){
 }
 
 async function hydrateExistingPhotosIntoDraft(existing){
-  for(const p of existing.qPhotos){
-    if(p.key){
-      const rec = await idbGetBlob(p.key);
-      if(rec) state.draftPhotos.q.push({ tempKey: p.key, blob: rec.blob, mediaType: p.type || 'image', existingRef: p });
-    }
-  }
-  for(const p of existing.sPhotos){
-    if(p.key){
-      const rec = await idbGetBlob(p.key);
-      if(rec) state.draftPhotos.s.push({ tempKey: p.key, blob: rec.blob, mediaType: p.type || 'image', existingRef: p });
-    }
-  }
+  const [qRecs, sRecs] = await Promise.all([
+    Promise.all(existing.qPhotos.map(p => p.key ? idbGetBlob(p.key) : null)),
+    Promise.all(existing.sPhotos.map(p => p.key ? idbGetBlob(p.key) : null))
+  ]);
+  existing.qPhotos.forEach((p, i)=>{
+    const rec = qRecs[i];
+    if(rec) state.draftPhotos.q.push({ tempKey: p.key, blob: rec.blob, mediaType: p.type || 'image', existingRef: p });
+  });
+  existing.sPhotos.forEach((p, i)=>{
+    const rec = sRecs[i];
+    if(rec) state.draftPhotos.s.push({ tempKey: p.key, blob: rec.blob, mediaType: p.type || 'image', existingRef: p });
+  });
   renderPhotoStrip('q'); renderPhotoStrip('s');
   if(existing.voice && existing.voice.key){
     const rec = await idbGetBlob(existing.voice.key);
@@ -2043,10 +2046,15 @@ async function enterAnnotMode(){
   canvas.style.top = (rect.top - stageRect.top) + 'px';
   canvas.style.width = rect.width + 'px';
   canvas.style.height = rect.height + 'px';
-  const dpr = Math.min(window.devicePixelRatio || 1, 2); // match the real screen density instead of always forcing 2x
+  // Capped lower than before — a smaller backing store means less work per
+  // stroke() call on weaker tablet GPUs, which matters more for latency than
+  // the extra crispness does. Dropped the {desynchronized:true} hint too:
+  // it's meant to lower latency but is inconsistently supported and can
+  // introduce tearing/extra latency on some Android GPU drivers instead.
+  const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
   canvas.width = Math.round(rect.width * dpr);
   canvas.height = Math.round(rect.height * dpr);
-  lbAnnotCtx = canvas.getContext('2d', { desynchronized: true }); // hints the browser to skip a compositing step for lower-latency drawing
+  lbAnnotCtx = canvas.getContext('2d');
   lbAnnotCtx.setTransform(dpr,0,0,dpr,0,0);
   lbAnnotCtx.lineCap = 'round'; lbAnnotCtx.lineJoin = 'round';
   lbAnnotStrokes = [];
@@ -2093,16 +2101,13 @@ lbAnnotCanvasEl.addEventListener('pointerdown', (e)=>{
 lbAnnotCanvasEl.addEventListener('pointermove', (e)=>{
   if(!lbAnnotMode || !lbAnnotDrawing) return;
   const stroke = lbAnnotStrokes[lbAnnotStrokes.length-1];
-  // getCoalescedEvents gives every real hardware sample since the last
-  // callback (styluses/S-Pen sample much faster than the browser dispatches
-  // events) — using them makes fast strokes smoother without extra lag.
-  const events = (e.getCoalescedEvents && e.getCoalescedEvents()) || [e];
-  (events.length ? events : [e]).forEach(ev=>{
-    const p = annotPos(ev);
-    const last = stroke.points[stroke.points.length-1];
-    stroke.points.push(p);
-    lbAnnotDrawSegment(last, p, stroke);
-  });
+  // One point, one draw call per callback — no coalesced-event replay. That
+  // trades a little curve smoothness on very fast strokes for the minimum
+  // possible work per frame, which is what "latency" actually comes down to.
+  const p = annotPos(e);
+  const last = stroke.points[stroke.points.length-1];
+  stroke.points.push(p);
+  lbAnnotDrawSegment(last, p, stroke);
 });
 function endAnnotStroke(){
   lbAnnotDrawing = false;
