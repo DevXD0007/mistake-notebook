@@ -568,6 +568,7 @@
     border:none; padding:0; cursor:pointer; opacity:0;
   }
   .lb-annot-tool{
+    position:relative;
     width:30px; height:30px; border-radius:50%; border:none; background: rgba(255,255,255,0.10);
     color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0;
     transition: background .16s ease, transform .16s ease;
@@ -575,6 +576,17 @@
   .lb-annot-tool:hover{ background: rgba(255,255,255,0.2); }
   .lb-annot-tool.sel{ background: rgba(255,255,255,0.34); }
   .lb-annot-tool:active, .lb-annot-swatch:active, .lb-annot-size:active{ transform: scale(0.86); }
+  .lb-eraser-mode-badge{
+    position:absolute; bottom:-3px; right:-3px; width:14px; height:14px; border-radius:50%;
+    background: var(--accent); color:#fff; font-size:8px; font-weight:800;
+    display:none; align-items:center; justify-content:center; line-height:1;
+  }
+  .lb-annot-tool[data-tool="eraser"].sel .lb-eraser-mode-badge{ display:flex; }
+  .lb-annot-grip{
+    cursor:grab; touch-action:none; color:rgba(255,255,255,0.45);
+    display:flex; align-items:center; padding:0 4px 0 2px; flex-shrink:0;
+  }
+  .lb-annot-grip:active{ cursor:grabbing; color:rgba(255,255,255,0.8); }
   .lb-annot-size{
     width:26px; height:26px; border-radius:50%; border:none; background: rgba(255,255,255,0.10);
     display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;
@@ -972,10 +984,11 @@
   <div class="lb-counter" id="lbCounter"></div>
 
   <div class="lb-annot-bar" id="lbAnnotBar">
+    <div class="lb-annot-grip" id="lbAnnotGrip" title="Drag to move"><svg width="12" height="16" viewBox="0 0 12 16" fill="currentColor"><circle cx="3" cy="2" r="1.4"/><circle cx="9" cy="2" r="1.4"/><circle cx="3" cy="8" r="1.4"/><circle cx="9" cy="8" r="1.4"/><circle cx="3" cy="14" r="1.4"/><circle cx="9" cy="14" r="1.4"/></svg></div>
     <div class="lb-annot-group" id="lbAnnotTools">
       <button class="lb-annot-tool sel" data-tool="pen" title="Pen"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       <button class="lb-annot-tool" data-tool="highlighter" title="Highlighter"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="m17 3 4 4-9 9H8v-4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M5 21h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
-      <button class="lb-annot-tool" data-tool="eraser" title="Eraser"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="m16 3 5 5-9.5 9.5H7L2.5 13Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M8 21h13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+      <button class="lb-annot-tool" data-tool="eraser" id="lbEraserToolBtn" title="Eraser — tap again to switch pixel/stroke mode"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="m16 3 5 5-9.5 9.5H7L2.5 13Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M8 21h13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span class="lb-eraser-mode-badge" id="lbEraserModeBadge">P</span></button>
     </div>
     <div class="lb-annot-group" id="lbAnnotSizes">
       <button class="lb-annot-size" data-size="1" title="Thin"><span class="lb-size-dot lb-size-s"></span></button>
@@ -1804,8 +1817,17 @@ async function loadLightboxEntry(fromNavigation){
 function applyLbTransform(withTransition){
   const media = $('#lbMedia');
   if(!media) return;
-  media.style.transition = withTransition ? 'transform .25s cubic-bezier(.2,.8,.2,1)' : 'none';
-  media.style.transform = `translate(${lbPanX}px, ${lbPanY}px) scale(${lbScale})`;
+  const t = withTransition ? 'transform .25s cubic-bezier(.2,.8,.2,1)' : 'none';
+  const v = `translate(${lbPanX}px, ${lbPanY}px) scale(${lbScale})`;
+  media.style.transition = t;
+  media.style.transform = v;
+  // Keep the drawing canvas moving in lockstep with the photo — same
+  // transform, same transform-origin (both default to center) — so zooming
+  // while annotating can't pull them out of alignment.
+  if(lbAnnotMode){
+    lbAnnotCanvasEl.style.transition = t;
+    lbAnnotCanvasEl.style.transform = v;
+  }
 }
 function resetLbZoom(withTransition){
   lbScale = 1; lbPanX = 0; lbPanY = 0;
@@ -1971,6 +1993,7 @@ let lbAnnotMode = false;
 let lbAnnotColor = '#ff3b30';
 let lbAnnotTool = 'pen';   // 'pen' | 'highlighter' | 'eraser'
 let lbAnnotSize = 2;       // 1=thin, 2=medium, 3=thick
+let lbAnnotEraserMode = 'pixel'; // 'pixel' erases wherever you drag; 'stroke' deletes whole strokes you touch
 let lbAnnotStrokes = [];
 let lbAnnotDrawing = false;
 let lbAnnotCtx = null;
@@ -2079,13 +2102,61 @@ function exitAnnotMode(){
   lbAnnotStrokes = [];
 }
 let lbAnnotCanvasRect = null;
+// Converts a screen point to the canvas's own (unzoomed) drawing coordinate
+// space. Needed because the canvas can now be visually scaled/panned (same
+// transform as the photo, so they stay in sync while zoomed) but its actual
+// pixel grid — what ctx.lineTo etc. draws into — never changes, so a touch
+// point has to be mapped back through that transform to land in the right
+// place.
 function annotPos(e){
   const rect = lbAnnotCanvasRect || lbAnnotCanvasEl.getBoundingClientRect();
-  return { x: e.clientX - rect.left, y: e.clientY - rect.top, pressure: e.pressure > 0 ? e.pressure : 0.5 };
+  const cx = rect.left + rect.width/2, cy = rect.top + rect.height/2;
+  const x = (e.clientX - cx - lbPanX) / lbScale + rect.width/2;
+  const y = (e.clientY - cy - lbPanY) / lbScale + rect.height/2;
+  return { x, y, pressure: e.pressure > 0 ? e.pressure : 0.5 };
+}
+function lbAnnotStrokeHit(stroke, x, y, tolerance){
+  for(const p of stroke.points){ if(Math.hypot(p.x-x, p.y-y) <= tolerance) return true; }
+  return false;
 }
 const lbAnnotCanvasEl = $('#lbAnnotCanvas');
+
+// One finger draws, two fingers pinch-zoom/pan — tracked by pointerId so
+// they can happen at the same time without fighting each other.
+let lbAnnotActivePointers = new Map();
+let lbAnnotPinchStartDist = 0, lbAnnotPinchStartScale = 1;
+let lbAnnotPinchStartMid = {x:0,y:0}, lbAnnotPinchStartPan = {x:0,y:0};
+function lbAnnotPinchGeometry(){
+  const pts = Array.from(lbAnnotActivePointers.values());
+  return {
+    dist: Math.hypot(pts[1].x-pts[0].x, pts[1].y-pts[0].y),
+    mid: { x:(pts[0].x+pts[1].x)/2, y:(pts[0].y+pts[1].y)/2 }
+  };
+}
+
 lbAnnotCanvasEl.addEventListener('pointerdown', (e)=>{
   if(!lbAnnotMode) return;
+  lbAnnotActivePointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+
+  if(lbAnnotActivePointers.size === 2){
+    // A second finger arrived — abandon any just-started single-finger
+    // stroke (almost certainly an accidental touch as the pinch began) and
+    // switch to zoom/pan.
+    if(lbAnnotDrawing){ lbAnnotDrawing = false; lbAnnotStrokes.pop(); redrawAnnotCanvas(); }
+    const g = lbAnnotPinchGeometry();
+    lbAnnotPinchStartDist = g.dist;
+    lbAnnotPinchStartMid = g.mid;
+    lbAnnotPinchStartScale = lbScale;
+    lbAnnotPinchStartPan = { x:lbPanX, y:lbPanY };
+    return;
+  }
+  if(lbAnnotActivePointers.size > 2) return; // ignore a third finger
+
+  if(lbAnnotTool === 'eraser' && lbAnnotEraserMode === 'stroke'){
+    lbAnnotDrawing = true;
+    lbAnnotCanvasRect = lbAnnotCanvasEl.getBoundingClientRect();
+    return; // hit-testing happens on move/down, not freehand drawing
+  }
   lbAnnotDrawing = true;
   lbAnnotCanvasEl.setPointerCapture(e.pointerId);
   // Reading getBoundingClientRect() on every single point (as the old code
@@ -2099,7 +2170,26 @@ lbAnnotCanvasEl.addEventListener('pointerdown', (e)=>{
   lbAnnotApplyStrokeState(stroke);
 });
 lbAnnotCanvasEl.addEventListener('pointermove', (e)=>{
-  if(!lbAnnotMode || !lbAnnotDrawing) return;
+  if(!lbAnnotMode || !lbAnnotActivePointers.has(e.pointerId)) return;
+  lbAnnotActivePointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+
+  if(lbAnnotActivePointers.size === 2){
+    const g = lbAnnotPinchGeometry();
+    lbScale = Math.min(Math.max(lbAnnotPinchStartScale * (g.dist / lbAnnotPinchStartDist), 1), 5);
+    lbPanX = lbAnnotPinchStartPan.x + (g.mid.x - lbAnnotPinchStartMid.x);
+    lbPanY = lbAnnotPinchStartPan.y + (g.mid.y - lbAnnotPinchStartMid.y);
+    applyLbTransform(false);
+    return;
+  }
+  if(!lbAnnotDrawing) return;
+
+  if(lbAnnotTool === 'eraser' && lbAnnotEraserMode === 'stroke'){
+    const p = annotPos(e);
+    const before = lbAnnotStrokes.length;
+    lbAnnotStrokes = lbAnnotStrokes.filter(s => !lbAnnotStrokeHit(s, p.x, p.y, 16));
+    if(lbAnnotStrokes.length !== before) redrawAnnotCanvas();
+    return;
+  }
   const stroke = lbAnnotStrokes[lbAnnotStrokes.length-1];
   // One point, one draw call per callback — no coalesced-event replay. That
   // trades a little curve smoothness on very fast strokes for the minimum
@@ -2109,13 +2199,20 @@ lbAnnotCanvasEl.addEventListener('pointermove', (e)=>{
   stroke.points.push(p);
   lbAnnotDrawSegment(last, p, stroke);
 });
+function endAnnotPointer(e){
+  const wasSoleDrawer = lbAnnotDrawing && lbAnnotActivePointers.size === 1;
+  lbAnnotActivePointers.delete(e.pointerId);
+  if(wasSoleDrawer) endAnnotStroke();
+  if(lbAnnotActivePointers.size === 0) lbAnnotDrawing = false;
+}
 function endAnnotStroke(){
   lbAnnotDrawing = false;
+  if(lbAnnotTool === 'eraser' && lbAnnotEraserMode === 'stroke') return;
   const stroke = lbAnnotStrokes[lbAnnotStrokes.length-1];
   if(stroke && stroke.points.length === 1) lbAnnotDrawDot(stroke); // a tap with no drag leaves a dot, like a real pen
 }
-lbAnnotCanvasEl.addEventListener('pointerup', endAnnotStroke);
-lbAnnotCanvasEl.addEventListener('pointercancel', endAnnotStroke);
+lbAnnotCanvasEl.addEventListener('pointerup', endAnnotPointer);
+lbAnnotCanvasEl.addEventListener('pointercancel', endAnnotPointer);
 
 $('#lbAnnotBtn').onclick = ()=>{ if(lbAnnotMode) exitAnnotMode(); else enterAnnotMode(); };
 $('#lbCancelAnnotBtn').onclick = exitAnnotMode;
@@ -2132,7 +2229,15 @@ $('#lbUndoBtn').onclick = ()=>{
 $('#lbAnnotTools').addEventListener('click', (e)=>{
   const btn = e.target.closest('.lb-annot-tool[data-tool]');
   if(!btn) return;
-  lbAnnotTool = btn.dataset.tool;
+  const wasAlreadyEraser = lbAnnotTool === 'eraser' && btn.dataset.tool === 'eraser';
+  if(wasAlreadyEraser){
+    // Tapping the already-selected eraser again switches its mode instead
+    // of doing nothing.
+    lbAnnotEraserMode = lbAnnotEraserMode === 'pixel' ? 'stroke' : 'pixel';
+  } else {
+    lbAnnotTool = btn.dataset.tool;
+  }
+  $('#lbEraserModeBadge').textContent = lbAnnotEraserMode === 'pixel' ? 'P' : 'S';
   $all('#lbAnnotTools .lb-annot-tool').forEach(b=>b.classList.remove('sel'));
   btn.classList.add('sel');
 });
@@ -2174,6 +2279,36 @@ $('#lbSaveAnnotBtn').onclick = async ()=>{
   await showLbItem(lbItemIndex);
   maybeSync();
 };
+
+// Drag the toolbar anywhere within the lightbox via its grip handle.
+(function(){
+  const grip = $('#lbAnnotGrip');
+  const bar = $('#lbAnnotBar');
+  let dragging = false, offsetX = 0, offsetY = 0;
+  grip.addEventListener('pointerdown', (e)=>{
+    dragging = true;
+    grip.setPointerCapture(e.pointerId);
+    const rect = bar.getBoundingClientRect();
+    offsetX = e.clientX - rect.left;
+    offsetY = e.clientY - rect.top;
+  });
+  grip.addEventListener('pointermove', (e)=>{
+    if(!dragging) return;
+    const box = $('#mediaLightbox').getBoundingClientRect();
+    const w = bar.offsetWidth, h = bar.offsetHeight;
+    let left = e.clientX - offsetX - box.left;
+    let top = e.clientY - offsetY - box.top;
+    left = Math.max(6, Math.min(left, box.width - w - 6));
+    top = Math.max(6, Math.min(top, box.height - h - 6));
+    bar.style.left = left + 'px';
+    bar.style.top = top + 'px';
+    bar.style.bottom = 'auto';
+    bar.style.transform = 'none';
+  });
+  function stopDrag(){ dragging = false; }
+  grip.addEventListener('pointerup', stopDrag);
+  grip.addEventListener('pointercancel', stopDrag);
+})();
 
 $('#viewCloseBtn').onclick = ()=> hideOverlay('#viewOverlay');
 $('#viewEditBtn').onclick = ()=>{
