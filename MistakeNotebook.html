@@ -277,6 +277,14 @@
     display:flex; flex-direction:column;
     transition: transform .2s cubic-bezier(.2,.8,.3,1), box-shadow .2s ease;
     position:relative;
+    /* Cards use .glass for the border/shadow language, but backdrop-filter
+       blur is genuinely expensive per-element, and a grid can have dozens
+       on screen while scrolling — unlike the toolbar/modals, where there's
+       only ever one active at a time. Turning it off here (with a more
+       opaque fill to compensate for the lost blur) is what actually fixes
+       general scroll jank, not a cosmetic downgrade for its own sake. */
+    backdrop-filter:none; -webkit-backdrop-filter:none;
+    background: var(--glass-surface-strong);
   }
   .entry-card:hover{ transform: translateY(-4px); }
   .entry-thumb{
@@ -1994,6 +2002,7 @@ let lbAnnotColor = '#ff3b30';
 let lbAnnotTool = 'pen';   // 'pen' | 'highlighter' | 'eraser'
 let lbAnnotSize = 2;       // 1=thin, 2=medium, 3=thick
 let lbAnnotEraserMode = 'pixel'; // 'pixel' erases wherever you drag; 'stroke' deletes whole strokes you touch
+let lbAnnotQueuedPoints = [], lbAnnotRafPending = false, lbAnnotQueueStart = null;
 let lbAnnotStrokes = [];
 let lbAnnotDrawing = false;
 let lbAnnotCtx = null;
@@ -2168,6 +2177,8 @@ lbAnnotCanvasEl.addEventListener('pointerdown', (e)=>{
   const stroke = { tool: lbAnnotTool, color: lbAnnotColor, size: lbAnnotSize, points:[annotPos(e)] };
   lbAnnotStrokes.push(stroke);
   lbAnnotApplyStrokeState(stroke);
+  lbAnnotQueueStart = stroke.points[0];
+  lbAnnotQueuedPoints = [];
 });
 lbAnnotCanvasEl.addEventListener('pointermove', (e)=>{
   if(!lbAnnotMode || !lbAnnotActivePointers.has(e.pointerId)) return;
@@ -2190,15 +2201,34 @@ lbAnnotCanvasEl.addEventListener('pointermove', (e)=>{
     if(lbAnnotStrokes.length !== before) redrawAnnotCanvas();
     return;
   }
+  // Queue the point and let requestAnimationFrame draw it — this is the
+  // difference between "draw on every pointer event" (which can fire faster
+  // than the screen can actually show anything, wasting work) and "draw
+  // once per displayed frame", which is what real drawing apps do. Multiple
+  // points queued between two frames get connected in a single path/stroke
+  // call instead of one stroke() call each.
   const stroke = lbAnnotStrokes[lbAnnotStrokes.length-1];
-  // One point, one draw call per callback — no coalesced-event replay. That
-  // trades a little curve smoothness on very fast strokes for the minimum
-  // possible work per frame, which is what "latency" actually comes down to.
   const p = annotPos(e);
-  const last = stroke.points[stroke.points.length-1];
   stroke.points.push(p);
-  lbAnnotDrawSegment(last, p, stroke);
+  lbAnnotQueuedPoints.push(p);
+  if(!lbAnnotRafPending){
+    lbAnnotRafPending = true;
+    requestAnimationFrame(lbAnnotFlushQueue);
+  }
 });
+function lbAnnotFlushQueue(){
+  lbAnnotRafPending = false;
+  if(lbAnnotQueuedPoints.length === 0) return;
+  const stroke = lbAnnotStrokes[lbAnnotStrokes.length-1];
+  if(!stroke){ lbAnnotQueuedPoints = []; return; }
+  lbAnnotCtx.lineWidth = lbAnnotWidth(stroke.tool, stroke.size, lbAnnotQueuedPoints[lbAnnotQueuedPoints.length-1].pressure);
+  lbAnnotCtx.beginPath();
+  lbAnnotCtx.moveTo(lbAnnotQueueStart.x, lbAnnotQueueStart.y);
+  lbAnnotQueuedPoints.forEach(pt => lbAnnotCtx.lineTo(pt.x, pt.y));
+  lbAnnotCtx.stroke();
+  lbAnnotQueueStart = lbAnnotQueuedPoints[lbAnnotQueuedPoints.length-1];
+  lbAnnotQueuedPoints = [];
+}
 function endAnnotPointer(e){
   const wasSoleDrawer = lbAnnotDrawing && lbAnnotActivePointers.size === 1;
   lbAnnotActivePointers.delete(e.pointerId);
@@ -2207,6 +2237,7 @@ function endAnnotPointer(e){
 }
 function endAnnotStroke(){
   lbAnnotDrawing = false;
+  if(lbAnnotQueuedPoints.length) lbAnnotFlushQueue(); // don't leave the last bit of the stroke waiting for the next frame
   if(lbAnnotTool === 'eraser' && lbAnnotEraserMode === 'stroke') return;
   const stroke = lbAnnotStrokes[lbAnnotStrokes.length-1];
   if(stroke && stroke.points.length === 1) lbAnnotDrawDot(stroke); // a tap with no drag leaves a dot, like a real pen
@@ -2640,6 +2671,7 @@ $('#editClientIdBtn').onclick = ()=>{
 };
 $('#disconnectDriveBtn').onclick = ()=>{
   accessToken = null; tokenExpiry = 0; gisTokenClient = null;
+  if(lbSilentRefreshTimer) clearTimeout(lbSilentRefreshTimer);
   clearTokenStorage();
   refreshDriveSettingsUI();
   updateSyncPill('local');
@@ -2772,10 +2804,32 @@ function requestToken(promptType){
       accessToken = resp.access_token;
       tokenExpiry = Date.now() + (resp.expires_in*1000 - 60000);
       saveTokenToStorage();
+      scheduleSilentRefresh();
       resolve(accessToken);
     };
     gisTokenClient.requestAccessToken({ prompt: promptType || '' });
   });
+}
+
+// Google's access tokens last about an hour and there's no refresh token
+// available to a pure client-side app like this one (that requires a
+// backend server to hold securely) — so a truly unlimited session isn't
+// possible here. What this does instead: a few minutes before the current
+// token would expire, quietly try a silent (no popup) renewal in the
+// background. When the browser allows that silent check (depends on its
+// third-party cookie policy for accounts.google.com), the session extends
+// itself indefinitely with no prompt ever shown. When it doesn't, this
+// simply does nothing extra — you'd see the same "tap to sign in" you do
+// today, no worse than before.
+let lbSilentRefreshTimer = null;
+function scheduleSilentRefresh(){
+  if(lbSilentRefreshTimer) clearTimeout(lbSilentRefreshTimer);
+  if(!accessToken || !tokenExpiry) return;
+  const msUntilTry = Math.max(tokenExpiry - Date.now() - 5*60*1000, 15000);
+  lbSilentRefreshTimer = setTimeout(async ()=>{
+    try{ await requestToken(''); } // success re-schedules itself via this same function
+    catch(e){ console.warn('Silent Drive session renewal did not succeed — next use may need a tap to sign in again', e); }
+  }, msUntilTry);
 }
 
 async function ensureToken(){
@@ -2988,6 +3042,7 @@ async function init(){
     catch(err){ console.warn('Drive client failed to initialize', err); }
     if(loadTokenFromStorage()){
       updateSyncPill('syncing');
+      scheduleSilentRefresh();
       syncWithDrive();
     }
   }
