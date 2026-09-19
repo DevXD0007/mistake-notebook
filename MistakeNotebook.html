@@ -2039,6 +2039,25 @@ function lbAnnotDrawDot(stroke){
   lbAnnotCtx.arc(p.x, p.y, lbAnnotWidth(stroke.tool, stroke.size, p.pressure)/2, 0, Math.PI*2);
   lbAnnotCtx.fill();
 }
+function lbAnnotDrawSmoothPath(points, stroke, fromPoint){
+  if(points.length === 0) return;
+  lbAnnotCtx.lineWidth = lbAnnotWidth(stroke.tool, stroke.size, points[points.length-1].pressure);
+  lbAnnotCtx.beginPath();
+  const start = fromPoint || points[0];
+  lbAnnotCtx.moveTo(start.x, start.y);
+  const rest = fromPoint ? points : points.slice(1);
+  for(let i=0;i<rest.length;i++){
+    const pt = rest[i];
+    const next = rest[i+1];
+    if(next){
+      const mid = { x:(pt.x+next.x)/2, y:(pt.y+next.y)/2 };
+      lbAnnotCtx.quadraticCurveTo(pt.x, pt.y, mid.x, mid.y);
+    } else {
+      lbAnnotCtx.lineTo(pt.x, pt.y);
+    }
+  }
+  lbAnnotCtx.stroke();
+}
 function redrawAnnotCanvas(){
   if(!lbAnnotCtx) return;
   lbAnnotCtx.clearRect(0, 0, lbAnnotCssW, lbAnnotCssH);
@@ -2050,7 +2069,10 @@ function redrawAnnotCanvas(){
   lbAnnotStrokes.forEach(stroke=>{
     lbAnnotApplyStrokeState(stroke);
     if(stroke.points.length < 2) lbAnnotDrawDot(stroke);
-    else for(let i=1;i<stroke.points.length;i++) lbAnnotDrawSegment(stroke.points[i-1], stroke.points[i], stroke);
+    // Curved through midpoints (not straight lineTo segments) so a
+    // redrawn/undo-affected stroke looks exactly like it did while being
+    // drawn live, instead of reverting to a faceted polyline.
+    else lbAnnotDrawSmoothPath(stroke.points, stroke);
   });
 }
 
@@ -2078,6 +2100,19 @@ async function enterAnnotMode(){
   canvas.style.top = (rect.top - stageRect.top) + 'px';
   canvas.style.width = rect.width + 'px';
   canvas.style.height = rect.height + 'px';
+  // Captured exactly once per annotate session, right here, while zoom is
+  // guaranteed to be reset to 1x. This is the untransformed reference box
+  // that annotPos() maps every touch back into. The previous version
+  // re-captured this at the start of every stroke via getBoundingClientRect()
+  // — which, if you were currently zoomed in, returns the already-scaled box,
+  // not the original one. annotPos() then divided by scale *again* on top of
+  // that already-scaled rect, corrupting every coordinate — that's what was
+  // actually causing the drawing to land in the wrong place, made drawing
+  // impossible while zoomed, and (because the math was wrong in a way that
+  // varies across a stroke) made curves come out faceted instead of smooth.
+  // The canvas is positioned to exactly match the image's rect, so that rect
+  // itself is already the correct reference — no extra measurement needed.
+  lbAnnotCanvasRect = rect;
   // Capped lower than before — a smaller backing store means less work per
   // stroke() call on weaker tablet GPUs, which matters more for latency than
   // the extra crispness does. Dropped the {desynchronized:true} hint too:
@@ -2163,17 +2198,10 @@ lbAnnotCanvasEl.addEventListener('pointerdown', (e)=>{
 
   if(lbAnnotTool === 'eraser' && lbAnnotEraserMode === 'stroke'){
     lbAnnotDrawing = true;
-    lbAnnotCanvasRect = lbAnnotCanvasEl.getBoundingClientRect();
     return; // hit-testing happens on move/down, not freehand drawing
   }
   lbAnnotDrawing = true;
   lbAnnotCanvasEl.setPointerCapture(e.pointerId);
-  // Reading getBoundingClientRect() on every single point (as the old code
-  // did) forces a layout recalculation on every pointer sample — that's
-  // where most of the drawing latency was actually coming from, not the
-  // canvas drawing itself. The canvas doesn't move mid-stroke, so this only
-  // needs to happen once per stroke, not once per point.
-  lbAnnotCanvasRect = lbAnnotCanvasEl.getBoundingClientRect();
   const stroke = { tool: lbAnnotTool, color: lbAnnotColor, size: lbAnnotSize, points:[annotPos(e)] };
   lbAnnotStrokes.push(stroke);
   lbAnnotApplyStrokeState(stroke);
@@ -2221,11 +2249,7 @@ function lbAnnotFlushQueue(){
   if(lbAnnotQueuedPoints.length === 0) return;
   const stroke = lbAnnotStrokes[lbAnnotStrokes.length-1];
   if(!stroke){ lbAnnotQueuedPoints = []; return; }
-  lbAnnotCtx.lineWidth = lbAnnotWidth(stroke.tool, stroke.size, lbAnnotQueuedPoints[lbAnnotQueuedPoints.length-1].pressure);
-  lbAnnotCtx.beginPath();
-  lbAnnotCtx.moveTo(lbAnnotQueueStart.x, lbAnnotQueueStart.y);
-  lbAnnotQueuedPoints.forEach(pt => lbAnnotCtx.lineTo(pt.x, pt.y));
-  lbAnnotCtx.stroke();
+  lbAnnotDrawSmoothPath(lbAnnotQueuedPoints, stroke, lbAnnotQueueStart);
   lbAnnotQueueStart = lbAnnotQueuedPoints[lbAnnotQueuedPoints.length-1];
   lbAnnotQueuedPoints = [];
 }
