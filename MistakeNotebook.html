@@ -2002,7 +2002,7 @@ let lbAnnotColor = '#ff3b30';
 let lbAnnotTool = 'pen';   // 'pen' | 'highlighter' | 'eraser'
 let lbAnnotSize = 2;       // 1=thin, 2=medium, 3=thick
 let lbAnnotEraserMode = 'pixel'; // 'pixel' erases wherever you drag; 'stroke' deletes whole strokes you touch
-let lbAnnotQueuedPoints = [], lbAnnotRafPending = false, lbAnnotQueueStart = null;
+let lbAnnotLastPoint = null, lbAnnotLastMid = null; // incremental midpoint-smoothing state for the live stroke
 let lbAnnotStrokes = [];
 let lbAnnotDrawing = false;
 let lbAnnotCtx = null;
@@ -2039,24 +2039,38 @@ function lbAnnotDrawDot(stroke){
   lbAnnotCtx.arc(p.x, p.y, lbAnnotWidth(stroke.tool, stroke.size, p.pressure)/2, 0, Math.PI*2);
   lbAnnotCtx.fill();
 }
-function lbAnnotDrawSmoothPath(points, stroke, fromPoint){
-  if(points.length === 0) return;
+// Used only for a full redraw (undo/reload) — smooths the whole stroke's
+// points through their midpoints in one pass, matching how it looked while
+// being drawn live (see lbAnnotDrawIncremental below for the live path).
+function lbAnnotDrawSmoothPath(points, stroke){
+  if(points.length < 2) return;
   lbAnnotCtx.lineWidth = lbAnnotWidth(stroke.tool, stroke.size, points[points.length-1].pressure);
   lbAnnotCtx.beginPath();
-  const start = fromPoint || points[0];
-  lbAnnotCtx.moveTo(start.x, start.y);
-  const rest = fromPoint ? points : points.slice(1);
-  for(let i=0;i<rest.length;i++){
-    const pt = rest[i];
-    const next = rest[i+1];
-    if(next){
-      const mid = { x:(pt.x+next.x)/2, y:(pt.y+next.y)/2 };
-      lbAnnotCtx.quadraticCurveTo(pt.x, pt.y, mid.x, mid.y);
-    } else {
-      lbAnnotCtx.lineTo(pt.x, pt.y);
-    }
+  lbAnnotCtx.moveTo(points[0].x, points[0].y);
+  for(let i=1;i<points.length-1;i++){
+    const mid = { x:(points[i].x+points[i+1].x)/2, y:(points[i].y+points[i+1].y)/2 };
+    lbAnnotCtx.quadraticCurveTo(points[i].x, points[i].y, mid.x, mid.y);
   }
+  lbAnnotCtx.lineTo(points[points.length-1].x, points[points.length-1].y);
   lbAnnotCtx.stroke();
+}
+// Used for live drawing — draws ONE small quadratic segment per input
+// sample, synchronously, the instant that sample arrives. This is the
+// standard low-latency-pen technique: curving through the midpoint between
+// consecutive points (using the actual point as the control) looks smooth
+// like a real pen, while drawing immediately (not deferred to the next
+// animation frame) is what actually minimizes lag — waiting for
+// requestAnimationFrame adds up to one frame of delay for no benefit on a
+// canvas this cheap to draw into.
+function lbAnnotDrawIncremental(newPoint, stroke){
+  const mid = { x:(lbAnnotLastPoint.x+newPoint.x)/2, y:(lbAnnotLastPoint.y+newPoint.y)/2 };
+  lbAnnotCtx.lineWidth = lbAnnotWidth(stroke.tool, stroke.size, newPoint.pressure);
+  lbAnnotCtx.beginPath();
+  lbAnnotCtx.moveTo(lbAnnotLastMid.x, lbAnnotLastMid.y);
+  lbAnnotCtx.quadraticCurveTo(lbAnnotLastPoint.x, lbAnnotLastPoint.y, mid.x, mid.y);
+  lbAnnotCtx.stroke();
+  lbAnnotLastMid = mid;
+  lbAnnotLastPoint = newPoint;
 }
 function redrawAnnotCanvas(){
   if(!lbAnnotCtx) return;
@@ -2202,12 +2216,13 @@ lbAnnotCanvasEl.addEventListener('pointerdown', (e)=>{
   }
   lbAnnotDrawing = true;
   lbAnnotCanvasEl.setPointerCapture(e.pointerId);
-  const stroke = { tool: lbAnnotTool, color: lbAnnotColor, size: lbAnnotSize, points:[annotPos(e)] };
+  const p0 = annotPos(e);
+  const stroke = { tool: lbAnnotTool, color: lbAnnotColor, size: lbAnnotSize, points:[p0] };
   lbAnnotStrokes.push(stroke);
   lbAnnotApplyStrokeState(stroke);
-  lbAnnotQueueStart = stroke.points[0];
-  lbAnnotQueuedPoints = [];
-});
+  lbAnnotLastPoint = p0;
+  lbAnnotLastMid = p0;
+}, {passive:true});
 lbAnnotCanvasEl.addEventListener('pointermove', (e)=>{
   if(!lbAnnotMode || !lbAnnotActivePointers.has(e.pointerId)) return;
   lbAnnotActivePointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
@@ -2229,30 +2244,20 @@ lbAnnotCanvasEl.addEventListener('pointermove', (e)=>{
     if(lbAnnotStrokes.length !== before) redrawAnnotCanvas();
     return;
   }
-  // Queue the point and let requestAnimationFrame draw it — this is the
-  // difference between "draw on every pointer event" (which can fire faster
-  // than the screen can actually show anything, wasting work) and "draw
-  // once per displayed frame", which is what real drawing apps do. Multiple
-  // points queued between two frames get connected in a single path/stroke
-  // call instead of one stroke() call each.
   const stroke = lbAnnotStrokes[lbAnnotStrokes.length-1];
-  const p = annotPos(e);
-  stroke.points.push(p);
-  lbAnnotQueuedPoints.push(p);
-  if(!lbAnnotRafPending){
-    lbAnnotRafPending = true;
-    requestAnimationFrame(lbAnnotFlushQueue);
-  }
-});
-function lbAnnotFlushQueue(){
-  lbAnnotRafPending = false;
-  if(lbAnnotQueuedPoints.length === 0) return;
-  const stroke = lbAnnotStrokes[lbAnnotStrokes.length-1];
-  if(!stroke){ lbAnnotQueuedPoints = []; return; }
-  lbAnnotDrawSmoothPath(lbAnnotQueuedPoints, stroke, lbAnnotQueueStart);
-  lbAnnotQueueStart = lbAnnotQueuedPoints[lbAnnotQueuedPoints.length-1];
-  lbAnnotQueuedPoints = [];
-}
+  // Draw every real hardware sample (S-Pen/stylus report far faster than
+  // the browser dispatches move events; getCoalescedEvents exposes those),
+  // each as its own tiny, immediate, incremental curve segment — no
+  // batching, no deferring to a later frame. That combination is what
+  // minimizes both latency (nothing is delayed) and facetedness (nothing
+  // is drawn as a single long straight jump between sparse points).
+  const events = (e.getCoalescedEvents && e.getCoalescedEvents()) || [e];
+  (events.length ? events : [e]).forEach(ev=>{
+    const p = annotPos(ev);
+    stroke.points.push(p);
+    lbAnnotDrawIncremental(p, stroke);
+  });
+}, {passive:true});
 function endAnnotPointer(e){
   const wasSoleDrawer = lbAnnotDrawing && lbAnnotActivePointers.size === 1;
   lbAnnotActivePointers.delete(e.pointerId);
@@ -2261,7 +2266,6 @@ function endAnnotPointer(e){
 }
 function endAnnotStroke(){
   lbAnnotDrawing = false;
-  if(lbAnnotQueuedPoints.length) lbAnnotFlushQueue(); // don't leave the last bit of the stroke waiting for the next frame
   if(lbAnnotTool === 'eraser' && lbAnnotEraserMode === 'stroke') return;
   const stroke = lbAnnotStrokes[lbAnnotStrokes.length-1];
   if(stroke && stroke.points.length === 1) lbAnnotDrawDot(stroke); // a tap with no drag leaves a dot, like a real pen
