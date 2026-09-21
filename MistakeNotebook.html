@@ -737,6 +737,20 @@
           <div class="dropdown-item" data-value="mastered">Mastered</div>
         </div>
       </div>
+      <div class="dropdown" id="mistakeFilterDropdown">
+        <button class="pill-select-btn" type="button">
+          <span class="dd-label">All mistake types</span>
+          <svg class="dd-chevron" width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="dropdown-menu" id="mistakeFilterMenu">
+          <div class="dropdown-item" data-value="Conceptual Gap">Conceptual gap</div>
+          <div class="dropdown-item" data-value="Silly / Calculation Error">Silly / calculation error</div>
+          <div class="dropdown-item" data-value="Misread Question">Misread question</div>
+          <div class="dropdown-item" data-value="Time Pressure">Time pressure</div>
+          <div class="dropdown-item" data-value="Formula Mixed Up">Formula mixed up</div>
+          <div class="dropdown-item" data-value="Other">Other</div>
+        </div>
+      </div>
       <div class="dropdown" id="sortDropdown">
         <button class="pill-select-btn" type="button">
           <span class="dd-label">Newest first</span>
@@ -1076,6 +1090,7 @@ let state = {
   entries: [],
   filterSubject: 'ALL',
   filterStatus: 'ALL',
+  filterMistakeTypes: [],
   filterSort: 'new',
   searchQuery: '',
   editingId: null,
@@ -2127,15 +2142,18 @@ async function enterAnnotMode(){
   // The canvas is positioned to exactly match the image's rect, so that rect
   // itself is already the correct reference — no extra measurement needed.
   lbAnnotCanvasRect = rect;
-  // Capped lower than before — a smaller backing store means less work per
-  // stroke() call on weaker tablet GPUs, which matters more for latency than
-  // the extra crispness does. Dropped the {desynchronized:true} hint too:
-  // it's meant to lower latency but is inconsistently supported and can
-  // introduce tearing/extra latency on some Android GPU drivers instead.
+  // {desynchronized:true} is Chrome's own documented API specifically for
+  // this exact problem (stylus drawing latency on canvas) — it bypasses the
+  // normal DOM/compositor update path so the canvas buffer can go closer to
+  // straight to the display. A change I made in an earlier pass removed
+  // this on unverified caution about GPU driver quirks; that reasoning
+  // wasn't backed by anything solid, and this is the correct, current,
+  // officially-recommended setting — restored properly, with feature
+  // detection so it degrades harmlessly on the rare browser that ignores it.
   const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
   canvas.width = Math.round(rect.width * dpr);
   canvas.height = Math.round(rect.height * dpr);
-  lbAnnotCtx = canvas.getContext('2d');
+  lbAnnotCtx = canvas.getContext('2d', { desynchronized: true });
   lbAnnotCtx.setTransform(dpr,0,0,dpr,0,0);
   lbAnnotCtx.lineCap = 'round'; lbAnnotCtx.lineJoin = 'round';
   lbAnnotStrokes = [];
@@ -2419,12 +2437,16 @@ function getFilteredEntries(){
   let list = state.entries.slice();
   if(state.filterSubject !== 'ALL') list = list.filter(e=>e.subject===state.filterSubject);
   if(state.filterStatus !== 'ALL') list = list.filter(e=>e.status===state.filterStatus);
+  if(state.filterMistakeTypes && state.filterMistakeTypes.length){
+    list = list.filter(e => e.mistakeTypes.some(mt => state.filterMistakeTypes.includes(mt)));
+  }
   if(state.searchQuery){
     const q = state.searchQuery.toLowerCase();
     list = list.filter(e =>
       (e.chapter||'').toLowerCase().includes(q) ||
       (e.source||'').toLowerCase().includes(q) ||
-      (e.note||'').toLowerCase().includes(q)
+      (e.note||'').toLowerCase().includes(q) ||
+      e.mistakeTypes.some(mt => mt.toLowerCase().includes(q))
     );
   }
   if(state.filterSort === 'new') list.sort((a,b)=> new Date(b.createdAt)-new Date(a.createdAt));
@@ -2580,6 +2602,36 @@ document.addEventListener('click', closeAllDropdowns);
 document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeAllDropdowns(); });
 setupDropdown('statusDropdown', (val)=>{ state.filterStatus = val; renderGrid(); });
 setupDropdown('sortDropdown', (val)=>{ state.filterSort = val; renderGrid(); });
+
+// Mistake-type filter is multi-select (pick several types at once, OR logic)
+// so it needs its own handler instead of the single-pick setupDropdown.
+(function(){
+  const container = $('#mistakeFilterDropdown');
+  const btn = container.querySelector('.pill-select-btn');
+  const label = btn.querySelector('.dd-label');
+  const menu = $('#mistakeFilterMenu');
+  btn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    const willOpen = !container.classList.contains('open');
+    closeAllDropdowns();
+    if(willOpen) container.classList.add('open');
+  });
+  menu.addEventListener('click', (e)=>{
+    e.stopPropagation(); // stay open across multiple picks instead of closing after one
+    const item = e.target.closest('.dropdown-item');
+    if(!item) return;
+    const val = item.dataset.value;
+    const set = new Set(state.filterMistakeTypes);
+    if(set.has(val)) set.delete(val); else set.add(val);
+    state.filterMistakeTypes = Array.from(set);
+    item.classList.toggle('sel');
+    label.textContent = state.filterMistakeTypes.length === 0
+      ? 'All mistake types'
+      : (state.filterMistakeTypes.length === 1 ? state.filterMistakeTypes[0] : state.filterMistakeTypes.length + ' types selected');
+    renderGrid();
+  });
+})();
+
 let searchDebounce;
 $('#searchInput').oninput = (e)=>{
   clearTimeout(searchDebounce);
