@@ -2142,18 +2142,18 @@ async function enterAnnotMode(){
   // The canvas is positioned to exactly match the image's rect, so that rect
   // itself is already the correct reference — no extra measurement needed.
   lbAnnotCanvasRect = rect;
-  // {desynchronized:true} is Chrome's own documented API specifically for
-  // this exact problem (stylus drawing latency on canvas) — it bypasses the
-  // normal DOM/compositor update path so the canvas buffer can go closer to
-  // straight to the display. A change I made in an earlier pass removed
-  // this on unverified caution about GPU driver quirks; that reasoning
-  // wasn't backed by anything solid, and this is the correct, current,
-  // officially-recommended setting — restored properly, with feature
-  // detection so it degrades harmlessly on the rare browser that ignores it.
+  // {desynchronized:true}: tried this based on Chrome's own docs, but on
+  // your actual hardware it made things measurably worse rather than
+  // better — reverted. Most likely cause: this canvas has a CSS transform
+  // applied to it (to stay in sync with the photo while pinch-zoomed), and
+  // desynchronized mode is documented to work best for a canvas that's
+  // *not* going through the normal transform/compositing pipeline —
+  // combining the two likely forced a slower, conflicted rendering path
+  // instead of the fast one. Real device behavior over documentation here.
   const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
   canvas.width = Math.round(rect.width * dpr);
   canvas.height = Math.round(rect.height * dpr);
-  lbAnnotCtx = canvas.getContext('2d', { desynchronized: true });
+  lbAnnotCtx = canvas.getContext('2d');
   lbAnnotCtx.setTransform(dpr,0,0,dpr,0,0);
   lbAnnotCtx.lineCap = 'round'; lbAnnotCtx.lineJoin = 'round';
   lbAnnotStrokes = [];
