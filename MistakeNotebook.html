@@ -690,9 +690,222 @@
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
   }
+
+  /* ============================= TESTS (mock-test analysis) ============================= */
+  :root{ --tx-line: rgba(20,25,45,0.16); }
+  [data-theme="dark"]{ --tx-line: rgba(255,255,255,0.14); }
+  [data-theme="dark"] input[type="date"]{ color-scheme: dark; }
+
+  /* Notebook | Tests switch, sits beside the subject tabs */
+  .viewswitch{ position:relative; display:flex; gap:2px; padding:4px; border-radius:999px; }
+  .vtab-thumb{
+    position:absolute; top:4px; left:0; height: calc(100% - 8px);
+    border-radius:999px; background: var(--glass-surface-strong);
+    box-shadow: 0 1px 0 var(--glass-hairline) inset, var(--shadow-contact), 0 4px 14px -4px rgba(24,28,45,0.18);
+    transition: transform .32s cubic-bezier(.2,.9,.2,1), width .32s cubic-bezier(.2,.9,.2,1);
+    pointer-events:none; z-index:0;
+  }
+  .vtab{
+    position:relative; z-index:1;
+    border:none; background:transparent; padding:7px 15px; border-radius:999px;
+    font-size:13px; font-weight:600; color: var(--ink-soft); cursor:pointer;
+    display:flex; align-items:center; gap:6px; white-space:nowrap;
+    transition: color .18s ease;
+  }
+  .vtab.active{ color: var(--accent); }
+
+  #testsRoot{ display:none; }
+  body[data-view="tests"] #testsRoot{ display:block; }
+  body[data-view="tests"] #entriesGrid{ display:none; }
+  body[data-view="tests"] .filter-row.nb-only{ display:none; }
+  body:not([data-view="tests"]) .filter-row.tx-only{ display:none; }
+  #txRevDropdown .dropdown-menu{ left:0; right:auto; }
+
+  .vtab, .tx-pill, .tx-card, .tx-subj-chip, .tx-add-photo, .tx-thumb, .tx-del, .tx-group, .tx-check{
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  /* shared solid-glass panel (no backdrop blur: there can be many of these on screen) */
+  .tx-panel{
+    background: var(--glass-surface-strong);
+    border: 1px solid var(--glass-hairline-soft);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 1px 0 var(--glass-hairline) inset, var(--shadow-ambient);
+  }
+
+  .tx-top{ display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
+  .tx-subnav{ display:flex; gap:6px; }
+  .tx-pill{
+    border:1px solid var(--tx-line); background: var(--glass-surface-strong); color: var(--ink-soft);
+    padding:8px 15px; border-radius:999px; font-size:12.5px; font-weight:650; cursor:pointer;
+    transition: background .15s ease, color .15s ease, border-color .15s ease;
+  }
+  .tx-pill.active{ background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+  .tx-top > .btn{ margin-left:auto; }
+
+  .tx-stats{ display:grid; grid-template-columns: repeat(4,1fr); gap:10px; margin-bottom:12px; }
+  .tx-stat{ padding:14px 16px; display:flex; flex-direction:column; gap:2px; }
+  .tx-stat b{ font-size:24px; letter-spacing:-0.03em; font-weight:750; font-variant-numeric: tabular-nums; }
+  .tx-stat span{ font-size:11.5px; color: var(--ink-faint); font-weight:600; }
+  .tx-stat.warn b{ color: var(--warn); }
+  .tx-stat.ok b{ color: var(--ok); }
+
+  .tx-insight{ padding:16px 18px 10px; margin-bottom:16px; }
+  .tx-insight-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; margin-bottom:8px; }
+  .tx-insight h3{ margin:0; font-size:14px; font-weight:700; letter-spacing:-0.01em; }
+  .tx-insight .sub{ font-size:11.5px; color: var(--ink-faint); margin-top:3px; }
+  .tx-bar-row{ display:grid; grid-template-columns: minmax(130px, 210px) 1fr 30px; gap:12px; align-items:center; padding:6px 0; font-size:12.5px; font-weight:600; color: var(--ink-soft); }
+  .tx-bar-row b{ text-align:right; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .tx-bar{ height:8px; border-radius:99px; background: rgba(127,127,127,0.16); overflow:hidden; }
+  .tx-bar i{ display:block; height:100%; border-radius:99px; background: var(--bar-c, var(--accent)); transition: width .4s cubic-bezier(.2,.9,.2,1); }
+
+  .tx-subj-counts{ display:flex; gap:6px; flex-wrap:wrap; }
+  .tx-subj-count{
+    font-size:11px; font-weight:700; padding:4px 9px; border-radius:99px;
+    color: var(--tag-c); background: color-mix(in srgb, var(--tag-c) 16%, transparent);
+  }
+
+  .tx-cards{ display:grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr)); gap:14px; }
+  .tx-card{ padding:16px 16px 14px; cursor:pointer; display:flex; flex-direction:column; gap:10px; transition: transform .2s cubic-bezier(.2,.8,.3,1); }
+  .tx-card:hover{ transform: translateY(-3px); }
+  .tx-card-top{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+  .tx-card-name{ font-size:15px; font-weight:700; letter-spacing:-0.01em; line-height:1.25; }
+  .tx-card-score{ font-size:12px; font-weight:700; padding:4px 10px; border-radius:99px; background: var(--accent-soft); color: var(--accent); white-space:nowrap; }
+  .tx-card-meta{ font-size:12px; color: var(--ink-faint); }
+  .tx-progress{ display:flex; align-items:center; gap:10px; font-size:11.5px; color: var(--ink-faint); font-weight:600; white-space:nowrap; }
+  .tx-progress .tx-bar{ flex:1; --bar-c: var(--ok); }
+
+  /* ---- one test ---- */
+  .tx-dhead{ padding:16px 18px; margin-bottom:14px; display:flex; flex-direction:column; gap:12px; }
+  .tx-dhead-top{ display:flex; align-items:center; gap:12px; }
+  .tx-dhead h2{ margin:0; font-size:19px; letter-spacing:-0.02em; font-weight:750; line-height:1.2; }
+  .tx-dhead .meta{ font-size:12.5px; color: var(--ink-faint); margin-top:3px; }
+  .tx-dhead-actions{ margin-left:auto; display:flex; gap:8px; }
+  .tx-dstat-line{ display:flex; gap:14px; align-items:baseline; flex-wrap:wrap; font-size:12.5px; color: var(--ink-faint); font-weight:600; }
+  .tx-dstat-line b{ font-size:15px; color: var(--ink); font-weight:750; }
+  .tx-notes{ font-size:13px; color: var(--ink-soft); line-height:1.5; white-space:pre-wrap; }
+  .tx-allhead{ font-size:12.5px; color: var(--ink-faint); font-weight:600; margin:0 2px 10px; }
+  .tx-addwrap{ display:flex; justify-content:center; margin-top:16px; }
+
+  /* ---- the analysis table (same four columns as the paper template) ---- */
+  .tx-table{
+    background: var(--glass-surface-strong);
+    border: 1px solid var(--tx-line);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 1px 0 var(--glass-hairline) inset, var(--shadow-ambient);
+    overflow:hidden;
+  }
+  .tx-cols{ display:grid; grid-template-columns: minmax(150px,0.9fr) minmax(130px,0.75fr) minmax(200px,1.2fr) minmax(220px,1.5fr); }
+  .tx-thead{ background: rgba(127,127,127,0.09); border-bottom:1px solid var(--tx-line); font-size:12.5px; font-weight:700; }
+  .tx-thead > div{ padding:12px 14px; border-right:1px solid var(--tx-line); line-height:1.3; }
+  .tx-thead > div:last-child{ border-right:none; }
+  .tx-rows{ display:block; }
+  .tx-row{ position:relative; display:grid; grid-template-columns: minmax(150px,0.9fr) minmax(130px,0.75fr) minmax(200px,1.2fr) minmax(220px,1.5fr); border-top:1px solid var(--tx-line); box-shadow: inset 3px 0 0 var(--warn); }
+  .tx-rows > .tx-row:first-child{ border-top:none; }
+  .tx-row.revised{ box-shadow: inset 3px 0 0 var(--ok); }
+  .tx-cell{ padding:12px 14px; border-right:1px solid var(--tx-line); min-width:0; display:flex; flex-direction:column; gap:9px; }
+  .tx-cell:nth-child(4){ border-right:none; }
+  .tx-cell::before{ content: attr(data-label); display:none; font-size:11.5px; font-weight:700; color: var(--ink-faint); }
+  .tx-foot{ grid-column: 1 / -1; display:flex; align-items:center; gap:12px; padding:8px 14px; border-top:1px dashed var(--tx-line); background: rgba(127,127,127,0.045); }
+  .tx-group{
+    display:flex; align-items:center; gap:10px; padding:11px 14px; cursor:pointer; font-size:13px;
+    background: color-mix(in srgb, var(--accent) 7%, transparent);
+    border-top:1px solid var(--tx-line); border-bottom:1px solid var(--tx-line);
+  }
+  .tx-rows > .tx-group:first-child{ border-top:none; }
+  .tx-group b{ font-weight:700; }
+  .tx-group span{ color: var(--ink-faint); font-size:12px; }
+  .tx-group em{ margin-left:auto; font-style:normal; font-size:12px; font-weight:650; color: var(--accent); }
+
+  .tx-q-line{ display:flex; align-items:center; gap:6px; }
+  .tx-q-prefix{ font-weight:800; font-size:16px; color: var(--ink-faint); }
+  .tx-in{
+    width:100%; min-width:0; padding:8px 10px; border-radius:10px; border:1px solid var(--tx-line);
+    background: rgba(127,127,127,0.07); font-size:13.5px; color: var(--ink); outline:none;
+    transition: background .15s ease, border-color .15s ease;
+  }
+  .tx-in:focus{ background: rgba(127,127,127,0.12); border-color: var(--accent); }
+  .tx-in::placeholder{ color: var(--ink-faint); }
+  .tx-qno{ font-size:16px; font-weight:750; }
+  textarea.tx-in{ resize:none; min-height:84px; line-height:1.5; overflow:hidden; display:block; }
+  .tx-mini-label{ font-size:11px; font-weight:650; color: var(--ink-faint); margin-top:2px; }
+
+  .tx-subj{ display:flex; gap:6px; }
+  .tx-subj-chip{
+    flex:1; border:1.5px solid var(--tx-line); background:transparent; color: var(--ink-soft);
+    border-radius:99px; padding:5px 0; font-size:11px; font-weight:700; cursor:pointer;
+    transition: all .15s ease;
+  }
+  .tx-subj-chip.on{ color: var(--tag-c); border-color: var(--tag-c); background: color-mix(in srgb, var(--tag-c) 16%, transparent); }
+
+  .tx-checks{ display:flex; flex-direction:column; gap:10px; }
+  .tx-check{ display:flex; align-items:flex-start; gap:9px; cursor:pointer; font-size:13px; line-height:1.3; color: var(--ink); }
+  .tx-check input{
+    -webkit-appearance:none; appearance:none; flex-shrink:0; margin:0; width:18px; height:18px; border-radius:6px;
+    border:1.5px solid var(--tx-line); background: rgba(127,127,127,0.10);
+    display:grid; place-content:center; cursor:pointer;
+    transition: background .15s ease, border-color .15s ease;
+  }
+  .tx-check input::after{
+    content:''; width:10px; height:10px; transform: scale(0); transition: transform .15s cubic-bezier(.3,1.5,.4,1);
+    background:#fff; clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+  }
+  .tx-check input:checked{ background: linear-gradient(155deg, var(--accent-2), var(--accent) 70%); border-color: transparent; }
+  .tx-check input:checked::after{ transform: scale(1); }
+  .tx-check input:focus-visible{ outline: 2.5px solid var(--accent); outline-offset: 2px; }
+  .tx-rev{ align-items:center; font-weight:650; }
+  .tx-rev input:checked{ background: linear-gradient(155deg, #4fd9a4, var(--ok) 70%); }
+
+  .tx-photos{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  .tx-thumb{
+    width:68px; height:68px; border-radius:12px; overflow:hidden; position:relative; flex-shrink:0; cursor:zoom-in;
+    background: rgba(127,127,127,0.12); border:1px solid var(--tx-line);
+  }
+  .tx-thumb img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; }
+  .tx-thumb-ph{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color: var(--ink-faint); opacity:.6; }
+  .tx-thumb-x{
+    position:absolute; top:3px; right:3px; width:20px; height:20px; border-radius:50%; z-index:2;
+    background: rgba(0,0,0,0.55); color:#fff; border:none; display:flex; align-items:center; justify-content:center;
+    cursor:pointer; font-size:14px; line-height:1; padding:0; backdrop-filter: blur(4px);
+  }
+  .tx-add-photo{
+    width:68px; height:68px; border-radius:12px; border:1.5px dashed var(--tx-line); background:transparent;
+    color: var(--ink-faint); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
+    font-size:10.5px; font-weight:650; cursor:pointer; flex-shrink:0;
+    transition: color .15s ease, border-color .15s ease, background .15s ease;
+  }
+  .tx-add-photo:hover{ color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+
+  .tx-del{
+    margin-left:auto; border:none; background: var(--accent-soft); color: var(--accent);
+    width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;
+    transition: transform .12s ease;
+  }
+  .tx-del:active{ transform: scale(0.9); }
+
+  @media (max-width: 860px){
+    .tx-thead{ display:none; }
+    .tx-row{ grid-template-columns: 1fr; }
+    .tx-cell{ border-right:none; border-bottom:1px dashed var(--tx-line); padding:14px 16px; }
+    .tx-cell::before{ display:block; }
+    .tx-in{ font-size:16px; }
+    .tx-foot{ padding:10px 16px; }
+  }
+  @media (max-width: 600px){
+    .viewswitch{ width:100%; }
+    .vtab{ flex:1; justify-content:center; }
+    .tx-stats{ grid-template-columns: repeat(2,1fr); }
+    .tx-bar-row{ grid-template-columns: 1fr 30px; row-gap:4px; }
+    .tx-bar-row .tx-bar{ grid-column: 1 / -1; grid-row: 2; }
+    .tx-bar-row b{ grid-row:1; grid-column:2; }
+    #txFilterRow .pill-select-btn{ padding:8px 10px; font-size:12px; gap:5px; }
+    .tx-dhead{ padding:14px; }
+    .tx-top > .btn{ margin-left:auto; }
+  }
 </style>
 </head>
-<body>
+<body data-view="notebook">
 <div id="app">
 
   <header class="topbar glass">
@@ -718,6 +931,11 @@
   </header>
 
   <div class="tabsbar">
+    <div class="viewswitch glass" id="viewSwitch">
+      <span class="vtab-thumb" id="viewThumb"></span>
+      <button class="vtab active" type="button" data-view="notebook"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 4.5A2.5 2.5 0 0 1 7.5 2H18a1 1 0 0 1 1 1v17a1 1 0 0 1-1 1H7.5A2.5 2.5 0 0 1 5 18.5v-14Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 7h6M9 10h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Notebook</button>
+      <button class="vtab" type="button" data-view="tests"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="5" y="4" width="14" height="17" rx="2.5" stroke="currentColor" stroke-width="1.8"/><path d="M9 4.5h6M9 13l2 2 4-4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Tests</button>
+    </div>
     <div class="tabs glass" id="subjectTabs">
       <span class="tab-thumb" id="tabThumb"></span>
       <button class="tab active" data-subject="ALL">All</button>
@@ -725,7 +943,7 @@
       <button class="tab" data-subject="CHEM"><span class="dot" style="background:var(--chem)"></span>Chemistry</button>
       <button class="tab" data-subject="MATH"><span class="dot" style="background:var(--math)"></span>Maths</button>
     </div>
-    <div class="filter-row">
+    <div class="filter-row nb-only">
       <div class="dropdown" id="statusDropdown">
         <button class="pill-select-btn" type="button">
           <span class="dd-label">All statuses</span>
@@ -763,6 +981,44 @@
         </div>
       </div>
     </div>
+    <div class="filter-row tx-only" id="txFilterRow">
+      <div class="dropdown" id="txRevDropdown">
+        <button class="pill-select-btn" type="button">
+          <span class="dd-label">All rows</span>
+          <svg class="dd-chevron" width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="dropdown-menu">
+          <div class="dropdown-item sel" data-value="ALL">All rows</div>
+          <div class="dropdown-item" data-value="todo">To revise</div>
+          <div class="dropdown-item" data-value="done">Revised</div>
+        </div>
+      </div>
+      <div class="dropdown" id="txTypeDropdown">
+        <button class="pill-select-btn" type="button">
+          <span class="dd-label">All types</span>
+          <svg class="dd-chevron" width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="dropdown-menu">
+          <div class="dropdown-item sel" data-value="ALL">All types</div>
+          <div class="dropdown-item" data-value="Recall">Recall</div>
+          <div class="dropdown-item" data-value="Application">Application</div>
+          <div class="dropdown-item" data-value="Analysis">Analysis</div>
+        </div>
+      </div>
+      <div class="dropdown" id="txReasonDropdown">
+        <button class="pill-select-btn" type="button">
+          <span class="dd-label">All reasons</span>
+          <svg class="dd-chevron" width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="dropdown-menu">
+          <div class="dropdown-item sel" data-value="ALL">All reasons</div>
+          <div class="dropdown-item" data-value="simple">Simple mistake</div>
+          <div class="dropdown-item" data-value="concept">Concept not understood</div>
+          <div class="dropdown-item" data-value="notcovered">Not covered / forgotten</div>
+          <div class="dropdown-item" data-value="other">Other</div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="signin-banner glass" id="signinBanner" style="display:none">
@@ -772,6 +1028,7 @@
   </div>
 
   <div class="grid" id="entriesGrid"></div>
+  <div id="testsRoot"></div>
 </div>
 
 <button class="fab" id="fabAdd" title="Add mistake">
@@ -1037,6 +1294,40 @@
   </div>
 </div>
 
+<!-- ============================= TEST MODAL (new / edit a mock test) ============================= -->
+<div class="overlay" id="testOverlay">
+  <div class="modal" id="testModal">
+    <div class="modal-drag"></div>
+    <div class="modal-head">
+      <h2 id="testModalTitle">New test</h2>
+      <button class="icon-btn" id="testCloseBtn" aria-label="Close"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    </div>
+    <div class="field">
+      <label for="testNameInput">Test name</label>
+      <input class="input" id="testNameInput" placeholder="e.g. JEE Main Mock 4" autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="testDateInput">Date taken</label>
+      <input class="input" type="date" id="testDateInput">
+    </div>
+    <div class="field">
+      <label for="testScoreInput">Score <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label>
+      <input class="input" id="testScoreInput" placeholder="e.g. 172 / 300" autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="testNotesInput">Overall takeaways <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label>
+      <textarea class="input" id="testNotesInput" placeholder="Time management, which section to start with, anything to fix next time…"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn danger" id="testDeleteBtn" style="display:none">Delete</button>
+      <button class="btn ghost" id="testCancelBtn" style="flex:1">Cancel</button>
+      <button class="btn primary" id="testSaveBtn" style="flex:2">Save test</button>
+    </div>
+  </div>
+</div>
+<input type="file" id="txPhotoInput" accept="image/*" multiple style="display:none">
+<datalist id="txChapterList"></datalist>
+
 <!-- ============================= CONFIRM MODAL ============================= -->
 <div class="overlay" id="confirmOverlay">
   <div class="modal confirm-modal" id="confirmModal">
@@ -1085,9 +1376,11 @@ const DEFAULT_CLIENT_ID = '87487097352-nep0kr5ci5i9kic2ih8tlmveslradq6p.apps.goo
 const LS_ENTRIES = 'mn_entries_v1';
 const LS_SETTINGS = 'mn_settings_v1';
 const LS_TOMBSTONES = 'mn_tombstones_v1';
+const LS_TESTS = 'mn_tests_v1';
 
 let state = {
   entries: [],
+  tests: [],
   filterSubject: 'ALL',
   filterStatus: 'ALL',
   filterMistakeTypes: [],
@@ -1729,7 +2022,7 @@ async function resolveMediaItem(p){
       if(!p.key){
         p.key = 'remote_' + p.driveId;
         await idbSetBlob(p.key, blob, blob.type || (type === 'video' ? 'video/mp4' : 'image/jpeg'));
-        persistEntries();
+        persistEntries(); persistTests();
       }
     }catch(e){ console.error(e); }
   }
@@ -1746,7 +2039,7 @@ async function resolveAnnotUrl(ref){
       if(!ref.annotKey){
         ref.annotKey = 'remote_' + ref.annotDriveId + '_annot';
         await idbSetBlob(ref.annotKey, blob, 'image/png');
-        persistEntries();
+        persistEntries(); persistTests();
       }
       return url;
     }catch(e){ console.error(e); }
@@ -2346,11 +2639,13 @@ $('#lbSaveAnnotBtn').onclick = async ()=>{
   if(!blob){ toast('Could not save that annotation'); return; }
   const annotKey = (ref.key || (entry.id + '_annot_src_' + lbItemIndex)) + '_annot';
   await idbSetBlob(annotKey, blob, 'image/png');
+  objectUrlCache.delete(annotKey); // same key is reused on re-save — drop the old cached URL so the new drawing shows
   ref.annotKey = annotKey;
   ref.annotDriveId = null; // stale now — will re-upload on next sync
   entry.pendingUpload = true;
   entry.updatedAt = nowIso();
   persistEntries();
+  if(entry._testId) touchTestById(entry._testId); // annotating a photo inside a test analysis row
   toast('Annotation saved');
   exitAnnotMode();
   await showLbItem(lbItemIndex);
@@ -2572,6 +2867,7 @@ $('#subjectTabs').addEventListener('click', (e)=>{
   positionTabThumb();
   state.filterSubject = tab.dataset.subject;
   renderGrid();
+  renderTests();
 });
 window.addEventListener('resize', positionTabThumb);
 window.addEventListener('load', positionTabThumb);
@@ -2635,7 +2931,7 @@ setupDropdown('sortDropdown', (val)=>{ state.filterSort = val; renderGrid(); });
 let searchDebounce;
 $('#searchInput').oninput = (e)=>{
   clearTimeout(searchDebounce);
-  searchDebounce = setTimeout(()=>{ state.searchQuery = e.target.value.trim(); renderGrid(); }, 180);
+  searchDebounce = setTimeout(()=>{ state.searchQuery = e.target.value.trim(); renderGrid(); renderTests(); }, 180);
 };
 
 /* ============================================================
@@ -2647,7 +2943,7 @@ $all('.overlay').forEach(ov=>{
   ov.addEventListener('click', (e)=>{ if(e.target === ov) hideOverlay('#'+ov.id); });
 });
 
-$('#fabAdd').onclick = ()=> openEntryModal(null);
+$('#fabAdd').onclick = ()=>{ if(document.body.dataset.view === 'tests') txFabAction(); else openEntryModal(null); };
 
 /* ============================================================
    CONFIRM MODAL
@@ -2769,7 +3065,7 @@ $('#exportBackupBtn').onclick = async ()=>{
       const rec = await idbGetBlob(k);
       if(rec) blobs[k] = { mime: rec.mime, data: await blobToBase64(rec.blob) };
     }
-    const payload = { exportedAt: nowIso(), entries: state.entries, blobs };
+    const payload = { exportedAt: nowIso(), entries: state.entries, tests: state.tests, blobs };
     const blob = new Blob([JSON.stringify(payload)], { type:'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -2804,19 +3100,32 @@ $('#importBackupInput').onchange = async (e)=>{
     }
     const existingIds = new Set(state.entries.map(e=>e.id));
     (payload.entries||[]).forEach(e=>{ if(!existingIds.has(e.id)) state.entries.push(e); });
+    const existingTestIds = new Set(state.tests.map(t=>t.id));
+    (payload.tests||[]).forEach(t=>{
+      if(existingTestIds.has(t.id)) return;
+      tombstones.delete(t.id);
+      state.tests.push(Object.assign(normalizeTest(t), { pendingUpload:true }));
+    });
+    persistTombstones();
+    persistTests();
     persistEntries();
     renderGrid();
+    renderTests();
     toast('Backup imported');
   }catch(err){ console.error(err); toast('Could not read that backup file'); }
 };
 
 $('#clearAllBtn').onclick = ()=>{
-  openConfirm('Delete all local data?', 'This removes every entry and photo from this device. If Drive is connected, your Drive copy is untouched.', async ()=>{
+  openConfirm('Delete all local data?', 'This removes every entry, test analysis and photo from this device. If Drive is connected, your Drive copy is untouched.', async ()=>{
     state.entries = [];
     persistEntries();
+    state.tests = [];
+    persistTests();
+    txUI.screen = 'list'; txUI.testId = null;
     const keys = await idbGetAllKeys();
     for(const k of keys) await idbDeleteBlob(k);
     renderGrid();
+    renderTests();
     toast('Local data cleared');
   });
 };
@@ -3053,6 +3362,7 @@ async function syncWithDrive(){
 
     const finalIndex = { entries: state.entries.map(stripLocalFields) };
     await pushRemoteIndex(finalIndex);
+    await syncTestsWithDrive(folderId);
 
     persistEntries();
     renderGrid();
@@ -3104,12 +3414,835 @@ async function pushEntryMedia(entry, folderId){
 window.addEventListener('online', ()=>{ if(isDriveReady() && accessToken && Date.now() < tokenExpiry) syncWithDrive(); });
 
 /* ============================================================
+   TESTS — mock-test analysis (the paper template, digitised)
+   One "test" = one mock exam. Every question you missed is a row:
+   question #, type of question, why it went wrong, the correct
+   answer + why, and photos of the question and of the solution.
+   Stored like the notebook: text in localStorage, photos in
+   IndexedDB, optionally synced to Drive — in its OWN file
+   (tests-index.json) so it can never disturb the notebook's index.json.
+============================================================ */
+const TX_TYPES = [
+  { id:'Recall',      hint:'Recall: remembering a fact, formula or definition' },
+  { id:'Application', hint:'Application: using a known concept on a new problem' },
+  { id:'Analysis',    hint:'Analysis: multi-step reasoning, breaking the problem down' }
+];
+const TX_REASONS = [
+  { id:'simple',     label:'Simple mistake',                           short:'Simple mistake',          color:'var(--mt-silly)' },
+  { id:'concept',    label:"Don't understand the question or concept", short:'Concept not understood',  color:'var(--mt-concept)' },
+  { id:'notcovered', label:"I don't remember this being covered",      short:'Not covered / forgotten', color:'var(--mt-time)' },
+  { id:'other',      label:'Other (explain)',                          short:'Other',                   color:'var(--mt-other)' }
+];
+const SUBJECT_SHORT = { PHY:'Phy', CHEM:'Chem', MATH:'Math' };
+const LS_VIEW = 'mn_view_v1';
+const TX_ICON = {
+  back:  '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  plus:  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>',
+  cam:   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.2a1 1 0 0 0 .8-.4l.9-1.2A1 1 0 0 1 10.2 4h3.6a1 1 0 0 1 .8.4l.9 1.2a1 1 0 0 0 .8.4h1.2A2.5 2.5 0 0 1 20 8.5v8a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 16.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="12.5" r="3.2" stroke="currentColor" stroke-width="1.6"/></svg>',
+  img:   '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 16.5 8.5 12l3 3L17 9.5 20 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><rect x="3" y="4" width="18" height="16" rx="2.5" stroke="currentColor" stroke-width="1.6"/></svg>',
+  trash: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0-.7 12.1a2 2 0 0 1-2 1.9H9.7a2 2 0 0 1-2-1.9L7 7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  clip:  '<svg width="52" height="52" viewBox="0 0 24 24" fill="none"><rect x="5" y="4" width="14" height="17" rx="2.5" stroke="currentColor" stroke-width="1.4"/><path d="M9 4.5h6M9 11h6M9 15h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>'
+};
+
+const txUI = {
+  view:'notebook', screen:'list', prevScreen:'list', testId:null,
+  filterRevised:'ALL', filterType:'ALL', filterReason:'ALL',
+  pendingPhoto:null
+};
+let txSaveTimer = null, txSyncTimer = null, driveTestsFileId = null;
+const txRoot = $('#testsRoot');
+
+/* ---- data helpers ---- */
+function txId(p){ return p + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8); }
+function normalizeTest(t){
+  t.name = String(t.name == null ? '' : t.name);
+  t.rows = Array.isArray(t.rows) ? t.rows : [];
+  t.rows.forEach(r=>{
+    r.qNo = String(r.qNo == null ? '' : r.qNo);
+    r.chapter = String(r.chapter == null ? '' : r.chapter);
+    r.reasonOther = String(r.reasonOther == null ? '' : r.reasonOther);
+    r.correctText = String(r.correctText == null ? '' : r.correctText);
+    r.types = Array.isArray(r.types) ? r.types : [];
+    r.reasons = Array.isArray(r.reasons) ? r.reasons : [];
+    r.qPhotos = Array.isArray(r.qPhotos) ? r.qPhotos : [];
+    r.sPhotos = Array.isArray(r.sPhotos) ? r.sPhotos : [];
+    r.revised = !!r.revised;
+    if(!r.subject || !SUBJECTS[r.subject]) r.subject = null;
+  });
+  return t;
+}
+function loadTests(){
+  try{
+    const raw = localStorage.getItem(LS_TESTS);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr.map(normalizeTest) : [];
+  }catch(e){ return []; }
+}
+function persistTests(){
+  try{ localStorage.setItem(LS_TESTS, JSON.stringify(state.tests)); }
+  catch(e){ console.warn('Could not save tests locally', e); }
+}
+function getTest(id){ return state.tests.find(t=>t.id===id) || null; }
+function getRow(t, id){ return t ? (t.rows.find(r=>r.id===id) || null) : null; }
+function newTestObj(f){
+  return { id:txId('t'), createdAt:nowIso(), updatedAt:nowIso(), name:f.name, date:f.date, score:f.score, notes:f.notes, rows:[], pendingUpload:true, _rev:1 };
+}
+function newRowObj(subject){
+  return { id:txId('r'), qNo:'', subject:subject||null, chapter:'', types:[], reasons:[], reasonOther:'', correctText:'', qPhotos:[], sPhotos:[], revised:false };
+}
+function todayStr(){
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function fmtDate(d){
+  if(!d) return '';
+  const dt = new Date(/^\d{4}-\d{2}-\d{2}$/.test(d) ? d + 'T00:00:00' : d);
+  return isNaN(dt) ? d : dt.toLocaleDateString(undefined, { day:'numeric', month:'short', year:'numeric' });
+}
+function testTime(t){ return t.date ? new Date(t.date + 'T00:00:00').getTime() : new Date(t.createdAt).getTime(); }
+function sortedTests(){
+  return state.tests.slice().sort((a,b)=> (testTime(b) - testTime(a)) || (new Date(b.createdAt) - new Date(a.createdAt)));
+}
+function driveLive(){ return isDriveReady() && !!accessToken && Date.now() < tokenExpiry; }
+
+/* ---- saving: typed text saves itself a moment after you stop typing ---- */
+function touchTest(t){
+  t.updatedAt = nowIso();
+  t.pendingUpload = true;
+  t._rev = (t._rev || 0) + 1;
+  if(txSaveTimer) clearTimeout(txSaveTimer);
+  txSaveTimer = setTimeout(flushTests, 350);
+  queueTestSync(3000);
+}
+function touchTestById(id){ const t = getTest(id); if(t) touchTest(t); refreshTestPhotos(id); }
+function flushTests(){
+  if(txSaveTimer){ clearTimeout(txSaveTimer); txSaveTimer = null; }
+  persistTests();
+}
+function queueTestSync(ms){
+  clearTimeout(txSyncTimer);
+  txSyncTimer = setTimeout(maybeSync, ms);
+}
+window.addEventListener('pagehide', flushTests);
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState === 'hidden') flushTests(); });
+
+/* ---- filters ---- */
+function filtersActive(){
+  return state.filterSubject !== 'ALL' || txUI.filterRevised !== 'ALL' || txUI.filterType !== 'ALL' ||
+         txUI.filterReason !== 'ALL' || !!state.searchQuery;
+}
+function visibleRows(t){
+  const q = (state.searchQuery || '').toLowerCase();
+  const testHit = q && (t.name + ' ' + (t.notes||'') + ' ' + (t.score||'')).toLowerCase().includes(q);
+  return t.rows.filter(r=>{
+    if(state.filterSubject !== 'ALL' && r.subject !== state.filterSubject) return false;
+    if(txUI.filterRevised === 'todo' && r.revised) return false;
+    if(txUI.filterRevised === 'done' && !r.revised) return false;
+    if(txUI.filterType !== 'ALL' && !r.types.includes(txUI.filterType)) return false;
+    if(txUI.filterReason !== 'ALL' && !r.reasons.includes(txUI.filterReason)) return false;
+    if(q && !testHit){
+      const hay = [r.qNo, r.chapter, r.correctText, r.reasonOther].join(' ').toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+/* ---- views ---- */
+function positionViewThumb(){
+  const active = document.querySelector('#viewSwitch .vtab.active');
+  const thumb = $('#viewThumb');
+  if(!active || !thumb) return;
+  thumb.style.width = active.offsetWidth + 'px';
+  thumb.style.transform = 'translateX(' + active.offsetLeft + 'px)';
+}
+function setView(v){
+  txUI.view = v;
+  document.body.dataset.view = v;
+  $all('.vtab').forEach(b=> b.classList.toggle('active', b.dataset.view === v));
+  positionViewThumb();
+  try{ localStorage.setItem(LS_VIEW, v); }catch(e){ /* ignore */ }
+  $('#searchInput').placeholder = v === 'tests' ? 'Search test, question, chapter or notes…' : 'Search chapter, source or notes…';
+  closeAllDropdowns();
+  if(v === 'tests') renderTests(); else updateFab();
+}
+$('#viewSwitch').addEventListener('click', (e)=>{
+  const b = e.target.closest('.vtab');
+  if(b) setView(b.dataset.view);
+});
+window.addEventListener('resize', positionViewThumb);
+window.addEventListener('load', positionViewThumb);
+setTimeout(positionViewThumb, 0);
+
+function updateFab(){
+  const fab = $('#fabAdd');
+  if(txUI.view !== 'tests'){ fab.style.display = ''; fab.title = 'Add mistake'; return; }
+  if(txUI.screen === 'all'){ fab.style.display = 'none'; return; }
+  fab.style.display = '';
+  fab.title = txUI.screen === 'test' ? 'Add a missed question' : 'New test';
+}
+function txFabAction(){
+  if(txUI.screen === 'test') addRow(txUI.testId);
+  else openTestModal(null);
+}
+
+function refreshChapterDatalist(){
+  const set = new Set();
+  state.entries.forEach(e=>{ if(e.chapter) set.add(e.chapter); });
+  state.tests.forEach(t=> t.rows.forEach(r=>{ if(r.chapter) set.add(r.chapter); }));
+  $('#txChapterList').innerHTML = Array.from(set).sort().map(c=>`<option value="${esc(c)}">`).join('');
+}
+
+function renderTests(){
+  if(txUI.view === 'tests'){
+    refreshChapterDatalist();
+    if(txUI.screen === 'test' && !getTest(txUI.testId)){ txUI.screen = 'list'; txUI.testId = null; }
+    if(txUI.screen === 'test') renderTestDetail(txRoot);
+    else if(txUI.screen === 'all') renderAllMistakes(txRoot);
+    else renderTestList(txRoot);
+  }
+  updateFab();
+}
+function renderTestsIfIdle(){
+  const a = document.activeElement;
+  if(a && txRoot.contains(a) && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return; // never yank the page from under someone typing
+  renderTests();
+}
+
+function topHtml(){
+  const s = txUI.screen;
+  return `<div class="tx-top">
+    <div class="tx-subnav">
+      <button type="button" class="tx-pill ${s==='list'?'active':''}" data-act="nav" data-screen="list">Tests</button>
+      <button type="button" class="tx-pill ${s==='all'?'active':''}" data-act="nav" data-screen="all">All mistakes</button>
+    </div>
+    <button type="button" class="btn primary sm" data-act="new-test">${TX_ICON.plus} New test</button>
+  </div>`;
+}
+function emptyHtml(title, sub, btn){
+  return `<div class="empty-state">${TX_ICON.clip}<b>${title}</b><span>${sub}</span>${btn || ''}</div>`;
+}
+
+/* ---- test list ---- */
+function statsHtml(){
+  const all = [];
+  state.tests.forEach(t=> t.rows.forEach(r=> all.push(r)));
+  const rows = state.filterSubject === 'ALL' ? all : all.filter(r=> r.subject === state.filterSubject);
+  const total = rows.length, done = rows.filter(r=>r.revised).length, todo = total - done;
+  const pct = total ? Math.round(done / total * 100) : 0;
+  let html = `<div class="tx-stats">
+    <div class="tx-stat tx-panel"><b>${state.tests.length}</b><span>Tests logged</span></div>
+    <div class="tx-stat tx-panel"><b>${total}</b><span>Mistakes logged</span></div>
+    <div class="tx-stat tx-panel warn"><b>${todo}</b><span>Left to revise</span></div>
+    <div class="tx-stat tx-panel ok"><b>${pct}%</b><span>Revised</span></div>
+  </div>`;
+  if(total){
+    const counts = TX_REASONS.map(rs=> ({ rs, n: rows.filter(r=> r.reasons.includes(rs.id)).length }));
+    const max = Math.max(1, ...counts.map(c=>c.n));
+    const anyReason = counts.some(c=>c.n > 0);
+    const split = Object.keys(SUBJECTS).map(k=>{
+      const n = all.filter(r=> r.subject === k).length;
+      return n ? `<span class="tx-subj-count" style="--tag-c:${SUBJECTS[k].color}">${SUBJECTS[k].label} ${n}</span>` : '';
+    }).join('');
+    html += `<div class="tx-panel tx-insight">
+      <div class="tx-insight-head">
+        <div><h3>Why marks are being lost</h3><div class="sub">${anyReason ? 'Share of mistakes tagged with each reason' : 'Tick a reason on each mistake to see this breakdown'}</div></div>
+        <div class="tx-subj-counts">${split}</div>
+      </div>
+      ${counts.map(c=>`<div class="tx-bar-row"><span>${esc(c.rs.short)}</span><div class="tx-bar" style="--bar-c:${c.rs.color}"><i style="width:${Math.round(c.n / max * 100)}%"></i></div><b>${c.n}</b></div>`).join('')}
+    </div>`;
+  }
+  return html;
+}
+function cardHtml(t){
+  const total = t.rows.length, done = t.rows.filter(r=>r.revised).length;
+  const pct = total ? Math.round(done / total * 100) : 0;
+  const subj = Object.keys(SUBJECTS).map(k=>{
+    const n = t.rows.filter(r=> r.subject === k).length;
+    return n ? `<span class="tx-subj-count" style="--tag-c:${SUBJECTS[k].color}">${SUBJECT_SHORT[k]} ${n}</span>` : '';
+  }).join('');
+  const match = filtersActive() ? ` · ${visibleRows(t).length} match` : '';
+  return `<div class="tx-card tx-panel" data-act="open-test" data-test="${t.id}">
+    <div class="tx-card-top"><div class="tx-card-name">${esc(t.name)}</div>${t.score ? `<span class="tx-card-score">${esc(t.score)}</span>` : ''}</div>
+    <div class="tx-card-meta">${fmtDate(t.date)} · ${total} mistake${total===1?'':'s'}${match}</div>
+    ${subj ? `<div class="tx-subj-counts">${subj}</div>` : ''}
+    ${total ? `<div class="tx-progress"><div class="tx-bar"><i style="width:${pct}%"></i></div><span>${done}/${total} revised</span></div>` : ''}
+  </div>`;
+}
+function renderTestList(root){
+  let html = topHtml();
+  if(state.tests.length === 0){
+    html += emptyHtml('No test analysis yet',
+      'After a mock test, log every question you missed: why it went wrong, the correct approach, and photos of both.',
+      `<button type="button" class="btn primary" data-act="new-test">${TX_ICON.plus} Add your first test</button>`);
+    root.innerHTML = html;
+    return;
+  }
+  html += statsHtml();
+  const active = filtersActive();
+  const shown = sortedTests().filter(t=> !active || visibleRows(t).length);
+  html += shown.length
+    ? `<div class="tx-cards">${shown.map(cardHtml).join('')}</div>`
+    : emptyHtml('Nothing matches those filters', 'Try a different subject, filter or search term.');
+  root.innerHTML = html;
+}
+
+/* ---- the table ---- */
+function theadHtml(){
+  return `<div class="tx-thead tx-cols"><div>Question # missed</div><div>Type of Question</div><div>Why did you answer this question wrong?</div><div>What should the correct answer be and why?</div></div>`;
+}
+function rowHtml(t, r){
+  const types = TX_TYPES.map(ty=>
+    `<label class="tx-check" title="${esc(ty.hint)}"><input type="checkbox" class="tx-cb" data-group="types" data-val="${ty.id}" ${r.types.includes(ty.id)?'checked':''}><span>${ty.id}</span></label>`).join('');
+  const reasons = TX_REASONS.map(rs=>
+    `<label class="tx-check"><input type="checkbox" class="tx-cb" data-group="reasons" data-val="${rs.id}" ${r.reasons.includes(rs.id)?'checked':''}><span>${esc(rs.label)}</span></label>`).join('');
+  const subj = Object.keys(SUBJECTS).map(k=>
+    `<button type="button" class="tx-subj-chip ${r.subject===k?'on':''}" data-act="subject" data-val="${k}" style="--tag-c:${SUBJECTS[k].color}">${SUBJECT_SHORT[k]}</button>`).join('');
+  return `<div class="tx-row${r.revised?' revised':''}" data-test="${t.id}" data-row="${r.id}">
+    <div class="tx-cell" data-label="Question # missed">
+      <div class="tx-q-line"><span class="tx-q-prefix">Q</span><input class="tx-in tx-qno" data-f="qNo" value="${esc(r.qNo)}" placeholder="No." maxlength="12" autocomplete="off"></div>
+      <div class="tx-subj">${subj}</div>
+      <input class="tx-in" data-f="chapter" list="txChapterList" value="${esc(r.chapter)}" placeholder="Chapter (optional)" autocomplete="off">
+      <div class="tx-mini-label">Question photo</div>
+      <div class="tx-photos" data-kind="q"></div>
+    </div>
+    <div class="tx-cell" data-label="Type of Question"><div class="tx-checks">${types}</div></div>
+    <div class="tx-cell" data-label="Why did you answer this question wrong?">
+      <div class="tx-checks">${reasons}</div>
+      <input class="tx-in" data-f="reasonOther" value="${esc(r.reasonOther)}" placeholder="Explain…" autocomplete="off">
+    </div>
+    <div class="tx-cell" data-label="What should the correct answer be and why?">
+      <textarea class="tx-in" data-f="correctText" rows="3" placeholder="Correct answer and the reasoning behind it…">${esc(r.correctText)}</textarea>
+      <div class="tx-mini-label">Solution photo</div>
+      <div class="tx-photos" data-kind="s"></div>
+    </div>
+    <div class="tx-foot">
+      <label class="tx-check tx-rev"><input type="checkbox" class="tx-cb" data-group="revised" ${r.revised?'checked':''}><span>Revised</span></label>
+      <button type="button" class="tx-del" data-act="del-row" aria-label="Delete this question" title="Delete this question">${TX_ICON.trash}</button>
+    </div>
+  </div>`;
+}
+function groupHtml(t){
+  return `<div class="tx-group" data-act="open-test" data-test="${t.id}"><b>${esc(t.name)}</b><span>${fmtDate(t.date)}${t.score ? ' · ' + esc(t.score) : ''}</span><em>Open test</em></div>`;
+}
+function autoGrow(el){
+  el.style.height = 'auto';
+  el.style.height = Math.max(el.scrollHeight, 84) + 'px';
+}
+window.addEventListener('resize', ()=>{
+  clearTimeout(autoGrow._t);
+  autoGrow._t = setTimeout(()=> txRoot.querySelectorAll('textarea.tx-in').forEach(autoGrow), 150);
+});
+function hydrateRow(el){
+  const t = getTest(el.dataset.test), r = getRow(t, el.dataset.row);
+  if(!r) return;
+  renderPhotos(el.querySelector('.tx-photos[data-kind="q"]'), r, 'q');
+  renderPhotos(el.querySelector('.tx-photos[data-kind="s"]'), r, 's');
+  el.querySelectorAll('textarea.tx-in').forEach(autoGrow);
+}
+function hydrateAll(root){ root.querySelectorAll('.tx-row').forEach(hydrateRow); }
+function refreshTestPhotos(testId){
+  txRoot.querySelectorAll('.tx-row').forEach(el=>{
+    if(el.dataset.test !== testId) return;
+    const r = getRow(getTest(testId), el.dataset.row);
+    if(!r) return;
+    renderPhotos(el.querySelector('.tx-photos[data-kind="q"]'), r, 'q');
+    renderPhotos(el.querySelector('.tx-photos[data-kind="s"]'), r, 's');
+  });
+}
+
+async function txThumbUrl(ref){
+  if(ref.thumbKey){ const u = await blobKeyToUrl(ref.thumbKey); if(u) return u; }
+  if(ref.key){ const u = await blobKeyToUrl(ref.key); if(u) return u; }
+  if(ref.driveId && driveLive()){
+    const it = await resolveMediaItem(ref); // downloads once, then keeps a local copy
+    if(it && it.url) return it.url;
+  }
+  return null;
+}
+function renderPhotos(box, r, kind){
+  if(!box) return;
+  const refs = kind === 'q' ? r.qPhotos : r.sPhotos;
+  box.innerHTML = refs.map((p, i)=>
+    `<div class="tx-thumb" data-act="open-photo" data-kind="${kind}" data-idx="${i}"><span class="tx-thumb-ph">${TX_ICON.img}</span><button type="button" class="tx-thumb-x" data-act="rm-photo" data-kind="${kind}" data-idx="${i}" aria-label="Remove photo">&times;</button></div>`
+  ).join('') +
+  `<button type="button" class="tx-add-photo" data-act="add-photo" data-kind="${kind}">${TX_ICON.cam}<span>${refs.length ? 'Add' : 'Photo'}</span></button>`;
+  refs.forEach((p, i)=>{
+    const th = box.children[i];
+    txThumbUrl(p).then(url=>{
+      if(!url || !th.isConnected) return;
+      const img = document.createElement('img');
+      img.alt = '';
+      img.src = url;
+      th.insertBefore(img, th.firstChild);
+    }).catch(()=>{});
+    if(p.annotKey || (p.annotDriveId && driveLive())){
+      resolveAnnotUrl(p).then(url=>{
+        if(!url || !th.isConnected) return;
+        const a = document.createElement('img');
+        a.alt = '';
+        a.src = url;
+        th.insertBefore(a, th.querySelector('.tx-thumb-x'));
+      }).catch(()=>{});
+    }
+  });
+}
+
+/* ---- one test ---- */
+function detailStatsHtml(t){
+  const total = t.rows.length, done = t.rows.filter(r=>r.revised).length;
+  const pct = total ? Math.round(done / total * 100) : 0;
+  const subj = Object.keys(SUBJECTS).map(k=>{
+    const n = t.rows.filter(r=> r.subject === k).length;
+    return n ? `<span class="tx-subj-count" style="--tag-c:${SUBJECTS[k].color}">${SUBJECTS[k].label} ${n}</span>` : '';
+  }).join('');
+  return `<div class="tx-dstat-line"><b>${total} mistake${total===1?'':'s'}</b><span>${total - done} left to revise</span>${filtersActive() ? `<span>Showing ${visibleRows(t).length}</span>` : ''}</div>
+    ${subj ? `<div class="tx-subj-counts">${subj}</div>` : ''}
+    ${total ? `<div class="tx-progress"><div class="tx-bar"><i style="width:${pct}%"></i></div><span>${pct}% revised</span></div>` : ''}`;
+}
+function renderTestDetail(root){
+  const t = getTest(txUI.testId);
+  const rows = visibleRows(t);
+  let body;
+  if(rows.length){
+    body = `<div class="tx-table">${theadHtml()}<div class="tx-rows" id="txRows">${rows.map(r=> rowHtml(t, r)).join('')}</div></div>
+      <div class="tx-addwrap"><button type="button" class="btn primary" data-act="add-row">${TX_ICON.plus} Add a missed question</button></div>`;
+  } else if(t.rows.length){
+    body = emptyHtml('Nothing matches those filters', 'Try a different subject, filter or search term.');
+  } else {
+    body = emptyHtml('No questions logged for this test yet',
+      'Add each question you got wrong: its number, why it went wrong, and the correct approach.',
+      `<button type="button" class="btn primary" data-act="add-row">${TX_ICON.plus} Add a missed question</button>`);
+  }
+  root.innerHTML = `<div class="tx-panel tx-dhead">
+      <div class="tx-dhead-top">
+        <button type="button" class="icon-btn" data-act="back" title="Back" aria-label="Back to tests">${TX_ICON.back}</button>
+        <div style="min-width:0">
+          <h2>${esc(t.name)}</h2>
+          <div class="meta">${fmtDate(t.date)}${t.score ? ' · Score ' + esc(t.score) : ''}</div>
+        </div>
+        <div class="tx-dhead-actions"><button type="button" class="btn ghost sm" data-act="edit-test">Edit</button></div>
+      </div>
+      <div id="txDstats">${detailStatsHtml(t)}</div>
+      ${t.notes ? `<div class="tx-notes">${esc(t.notes)}</div>` : ''}
+    </div>${body}`;
+  hydrateAll(root);
+}
+function openTest(id){
+  txUI.prevScreen = txUI.screen === 'all' ? 'all' : 'list';
+  txUI.screen = 'test';
+  txUI.testId = id;
+  try{ history.pushState({ mnTx:1 }, ''); }catch(e){ /* ignore */ }
+  renderTests();
+  window.scrollTo(0, 0);
+}
+function closeTest(){
+  if(history.state && history.state.mnTx){ history.back(); return; } // popstate handler does the rest
+  txUI.screen = txUI.prevScreen || 'list';
+  txUI.testId = null;
+  renderTests();
+  window.scrollTo(0, 0);
+}
+window.addEventListener('popstate', ()=>{
+  if(txUI.screen === 'test'){
+    txUI.screen = txUI.prevScreen || 'list';
+    txUI.testId = null;
+    renderTests();
+  }
+});
+
+/* ---- all mistakes, across every test (the "day before the exam" view) ---- */
+function allGroups(){
+  return sortedTests().map(t=> ({ t, rows: visibleRows(t) })).filter(g=> g.rows.length);
+}
+function allSummaryText(){
+  const groups = allGroups();
+  const n = groups.reduce((s,g)=> s + g.rows.length, 0);
+  const todo = groups.reduce((s,g)=> s + g.rows.filter(r=>!r.revised).length, 0);
+  return `${n} mistake${n===1?'':'s'} across ${groups.length} test${groups.length===1?'':'s'} · ${todo} left to revise`;
+}
+function renderAllMistakes(root){
+  const groups = allGroups();
+  let html = topHtml();
+  if(!groups.length){
+    const none = state.tests.every(t=> t.rows.length === 0);
+    html += none
+      ? emptyHtml('No mistakes logged yet', 'Open a test and add the questions you missed. They all show up here for a final revision pass.')
+      : emptyHtml('Nothing matches those filters', 'Try a different subject, filter or search term.');
+    root.innerHTML = html;
+    return;
+  }
+  html += `<div class="tx-allhead" id="txAllSummary">${allSummaryText()}</div>
+    <div class="tx-table">${theadHtml()}<div class="tx-rows" id="txRows">${groups.map(g=> groupHtml(g.t) + g.rows.map(r=> rowHtml(g.t, r)).join('')).join('')}</div></div>`;
+  root.innerHTML = html;
+  hydrateAll(root);
+}
+function refreshStats(){
+  if(txUI.screen === 'test'){
+    const t = getTest(txUI.testId), el = $('#txDstats');
+    if(t && el) el.innerHTML = detailStatsHtml(t);
+  } else if(txUI.screen === 'all'){
+    const el = $('#txAllSummary');
+    if(el) el.textContent = allSummaryText();
+  }
+}
+
+/* ---- editing: everything in the table saves as you go ---- */
+function rowContext(el){
+  const rowEl = el.closest('.tx-row');
+  if(!rowEl) return null;
+  const t = getTest(rowEl.dataset.test), r = getRow(t, rowEl.dataset.row);
+  return r ? { rowEl, t, r } : null;
+}
+txRoot.addEventListener('input', (e)=>{
+  const el = e.target;
+  if(!el.classList || !el.classList.contains('tx-in')) return;
+  const c = rowContext(el);
+  if(!c) return;
+  const f = el.dataset.f;
+  c.r[f] = el.value;
+  if(el.tagName === 'TEXTAREA') autoGrow(el);
+  if(f === 'reasonOther' && el.value.trim() && !c.r.reasons.includes('other')){
+    c.r.reasons.push('other'); // typing an explanation ticks "Other" for you
+    const cb = c.rowEl.querySelector('.tx-cb[data-group="reasons"][data-val="other"]');
+    if(cb) cb.checked = true;
+  }
+  touchTest(c.t);
+});
+txRoot.addEventListener('change', (e)=>{
+  const cb = e.target;
+  if(!cb.classList || !cb.classList.contains('tx-cb')) return;
+  const c = rowContext(cb);
+  if(!c) return;
+  const g = cb.dataset.group;
+  if(g === 'revised'){
+    c.r.revised = cb.checked;
+    c.rowEl.classList.toggle('revised', cb.checked);
+  } else {
+    const arr = c.r[g], v = cb.dataset.val, i = arr.indexOf(v);
+    if(cb.checked && i === -1) arr.push(v);
+    if(!cb.checked && i !== -1) arr.splice(i, 1);
+  }
+  touchTest(c.t);
+  refreshStats();
+});
+txRoot.addEventListener('click', (e)=>{
+  const act = e.target.closest('[data-act]');
+  if(!act || !txRoot.contains(act)) return;
+  const a = act.dataset.act;
+  if(a === 'nav'){ txUI.screen = act.dataset.screen; renderTests(); return; }
+  if(a === 'new-test'){ openTestModal(null); return; }
+  if(a === 'open-test'){ openTest(act.dataset.test); return; }
+  if(a === 'back'){ closeTest(); return; }
+  if(a === 'edit-test'){ openTestModal(getTest(txUI.testId)); return; }
+  if(a === 'add-row'){ addRow(txUI.testId); return; }
+  const c = rowContext(act);
+  if(!c) return;
+  if(a === 'subject'){
+    c.r.subject = c.r.subject === act.dataset.val ? null : act.dataset.val;
+    c.rowEl.querySelectorAll('.tx-subj-chip').forEach(b=> b.classList.toggle('on', b.dataset.val === c.r.subject));
+    touchTest(c.t);
+    refreshStats();
+  } else if(a === 'add-photo'){
+    txUI.pendingPhoto = { testId:c.t.id, rowId:c.r.id, kind:act.dataset.kind };
+    $('#txPhotoInput').click();
+  } else if(a === 'open-photo'){
+    openRowLightbox(c.t, c.r, act.dataset.kind, parseInt(act.dataset.idx, 10));
+  } else if(a === 'rm-photo'){
+    removePhoto(c.t, c.r, act.dataset.kind, parseInt(act.dataset.idx, 10));
+  } else if(a === 'del-row'){
+    deleteRow(c.t, c.r);
+  }
+});
+
+function addRow(testId){
+  const t = getTest(testId);
+  if(!t) return;
+  const r = newRowObj(state.filterSubject !== 'ALL' ? state.filterSubject : null);
+  t.rows.push(r);
+  touchTest(t);
+  flushTests();
+  if(!visibleRows(t).includes(r)){ toast('Added. Clear the filters or search to see it'); refreshStats(); return; }
+  if(!$('#txRows')) renderTests();
+  else {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = rowHtml(t, r);
+    $('#txRows').appendChild(tmp.firstElementChild);
+    hydrateRow($('#txRows').lastElementChild);
+    refreshStats();
+  }
+  const el = txRoot.querySelector(`.tx-row[data-row="${r.id}"]`);
+  if(el){
+    el.scrollIntoView({ behavior:'smooth', block:'center' });
+    const inp = el.querySelector('.tx-qno');
+    if(inp) setTimeout(()=> inp.focus({ preventScroll:true }), 300);
+  }
+}
+
+async function purgeRef(p, alsoDrive){
+  for(const k of [p.key, p.thumbKey, p.annotKey]){
+    if(k){ try{ await idbDeleteBlob(k); }catch(e){ /* ignore */ } }
+  }
+  if(alsoDrive && driveLive()){
+    if(p.driveId) deleteDriveFile(p.driveId);
+    if(p.annotDriveId) deleteDriveFile(p.annotDriveId);
+  }
+}
+function deleteRow(t, r){
+  const go = async ()=>{
+    for(const p of [...r.qPhotos, ...r.sPhotos]) await purgeRef(p, true);
+    t.rows = t.rows.filter(x=> x.id !== r.id);
+    touchTest(t);
+    flushTests();
+    if(txUI.screen === 'test' && visibleRows(t).length === 0) renderTests();
+    else {
+      const el = txRoot.querySelector(`.tx-row[data-row="${r.id}"]`);
+      if(el) el.remove();
+      if(txUI.screen === 'all' && allGroups().length !== txRoot.querySelectorAll('.tx-group').length) renderTests();
+      else refreshStats();
+    }
+  };
+  const hasContent = r.qNo || r.chapter || r.correctText || r.reasonOther || r.types.length || r.reasons.length || r.qPhotos.length || r.sPhotos.length;
+  if(hasContent) openConfirm('Delete this question?', 'Its notes and photos will be removed from this device and from Drive.', go);
+  else go();
+}
+function removePhoto(t, r, kind, idx){
+  openConfirm('Remove this photo?', 'It will be removed from this device and from Drive.', async ()=>{
+    const arr = kind === 'q' ? r.qPhotos : r.sPhotos;
+    const p = arr[idx];
+    if(!p) return;
+    arr.splice(idx, 1);
+    await purgeRef(p, true);
+    touchTest(t);
+    flushTests();
+    const el = txRoot.querySelector(`.tx-row[data-row="${r.id}"]`);
+    if(el) renderPhotos(el.querySelector(`.tx-photos[data-kind="${kind}"]`), r, kind);
+  });
+}
+async function addRowPhotos(target, files){
+  const t = getTest(target.testId), r = getRow(t, target.rowId);
+  if(!r) return;
+  const arr = target.kind === 'q' ? r.qPhotos : r.sPhotos;
+  let added = 0;
+  for(const f of files){
+    if(!((f.type || '').startsWith('image/') || looksLikeHeic(f))) continue;
+    try{
+      const blob = await compressImage(f, 1800, 0.85);
+      const key = r.id + '_' + target.kind + '_' + Math.random().toString(36).slice(2,8);
+      await idbSetBlob(key, blob, 'image/jpeg');
+      const thumb = await compressImage(blob, 320, 0.6);
+      await idbSetBlob(key + '_thumb', thumb, 'image/jpeg');
+      arr.push({ key, thumbKey: key + '_thumb', type:'image', driveId:null });
+      added++;
+    }catch(err){
+      console.error(err);
+      toast('Could not add one of those photos');
+    }
+  }
+  if(!added) return;
+  touchTest(t);
+  flushTests();
+  const el = txRoot.querySelector(`.tx-row[data-row="${r.id}"]`);
+  if(el) renderPhotos(el.querySelector(`.tx-photos[data-kind="${target.kind}"]`), r, target.kind);
+}
+$('#txPhotoInput').addEventListener('change', (e)=>{
+  const files = Array.from(e.target.files || []);
+  e.target.value = '';
+  const target = txUI.pendingPhoto;
+  txUI.pendingPhoto = null;
+  if(target && files.length) addRowPhotos(target, files);
+});
+// Reuses the notebook's fullscreen viewer (pinch-zoom, swipe, annotate). The
+// row's own photo refs are passed straight through, so annotations land on them.
+function openRowLightbox(t, r, kind, idx){
+  const pseudo = { id:r.id, chapter:(t.name || 'Test') + ' · Q' + (r.qNo || '?'), qPhotos:r.qPhotos, sPhotos:r.sPhotos, _testId:t.id };
+  openMediaLightboxForEntry(pseudo, kind === 'q' ? idx : r.qPhotos.length + idx);
+}
+
+/* ---- new / edit test ---- */
+let txEditingId = null;
+function openTestModal(t){
+  txEditingId = t ? t.id : null;
+  $('#testModalTitle').textContent = t ? 'Edit test' : 'New test';
+  $('#testNameInput').value = t ? t.name : '';
+  $('#testDateInput').value = t ? (t.date || '') : todayStr();
+  $('#testScoreInput').value = t ? (t.score || '') : '';
+  $('#testNotesInput').value = t ? (t.notes || '') : '';
+  $('#testDeleteBtn').style.display = t ? '' : 'none';
+  showOverlay('#testOverlay');
+}
+$('#testSaveBtn').onclick = ()=>{
+  const name = $('#testNameInput').value.trim();
+  if(!name){ toast('Give the test a name'); return; }
+  const f = { name, date: $('#testDateInput').value || todayStr(), score: $('#testScoreInput').value.trim(), notes: $('#testNotesInput').value.trim() };
+  hideOverlay('#testOverlay');
+  if(txEditingId){
+    const t = getTest(txEditingId);
+    if(!t) return;
+    Object.assign(t, f);
+    touchTest(t);
+    flushTests();
+    renderTests();
+    toast('Test updated');
+  } else {
+    const t = newTestObj(f);
+    state.tests.push(t);
+    persistTests();
+    queueTestSync(1500);
+    toast('Test added');
+    txUI.view = 'tests';
+    openTest(t.id);
+  }
+};
+$('#testCancelBtn').onclick = ()=> hideOverlay('#testOverlay');
+$('#testCloseBtn').onclick = ()=> hideOverlay('#testOverlay');
+$('#testDeleteBtn').onclick = ()=>{
+  const t = getTest(txEditingId);
+  if(!t) return;
+  hideOverlay('#testOverlay');
+  openConfirm('Delete this test?', 'All its questions, notes and photos will be removed from this device and from Drive.', ()=> deleteTest(t));
+};
+async function deleteTest(t){
+  for(const r of t.rows) for(const p of [...r.qPhotos, ...r.sPhotos]) await purgeRef(p, true);
+  state.tests = state.tests.filter(x=> x.id !== t.id);
+  tombstones.add(t.id);
+  persistTombstones();
+  flushTests();
+  if(txUI.testId === t.id){ txUI.screen = txUI.prevScreen || 'list'; txUI.testId = null; }
+  renderTests();
+  toast('Test deleted');
+  queueTestSync(1500);
+}
+
+/* ---- filter dropdowns (Tests view) ---- */
+setupDropdown('txRevDropdown',    v=>{ txUI.filterRevised = v; renderTests(); });
+setupDropdown('txTypeDropdown',   v=>{ txUI.filterType = v; renderTests(); });
+setupDropdown('txReasonDropdown', v=>{ txUI.filterReason = v; renderTests(); });
+
+/* ---- Google Drive: tests-index.json (separate from the notebook's index.json) ---- */
+async function getOrCreateTestsFile(){
+  if(driveTestsFileId) return driveTestsFileId;
+  const folderId = await findOrCreateFolder();
+  const q = encodeURIComponent(`name='tests-index.json' and '${folderId}' in parents and trashed=false`);
+  const res = await driveFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`);
+  const data = await res.json();
+  if(data.files && data.files.length){ driveTestsFileId = data.files[0].id; return driveTestsFileId; }
+  const boundary = 'mnb' + Date.now();
+  const body = buildMultipartBody(boundary, { name:'tests-index.json', parents:[folderId], mimeType:'application/json' }, JSON.stringify({ tests:[], deleted:[] }), 'application/json');
+  const createRes = await driveFetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+    method:'POST', headers:{ 'Content-Type':`multipart/related; boundary=${boundary}` }, body
+  });
+  const file = await createRes.json();
+  driveTestsFileId = file.id;
+  return driveTestsFileId;
+}
+function stripTestForRemote(t){
+  const clone = JSON.parse(JSON.stringify(t));
+  delete clone.pendingUpload;
+  delete clone._rev;
+  const strip = p => ({ driveId: p.driveId || null, type:'image', annotDriveId: p.annotDriveId || null });
+  clone.rows = t.rows.map(r=>{
+    const row = JSON.parse(JSON.stringify(r));
+    row.qPhotos = r.qPhotos.map(strip);
+    row.sPhotos = r.sPhotos.map(strip);
+    return row;
+  });
+  return clone;
+}
+// A newer copy from another device replaces the local one, but keeps this
+// device's local photo keys so nothing needs downloading again.
+function adoptRemoteTest(local, remote){
+  const byDrive = new Map();
+  local.rows.forEach(r=> [...r.qPhotos, ...r.sPhotos].forEach(p=>{ if(p.driveId) byDrive.set(p.driveId, p); }));
+  normalizeTest(remote);
+  remote.rows.forEach(r=> [...r.qPhotos, ...r.sPhotos].forEach(p=>{
+    const old = p.driveId && byDrive.get(p.driveId);
+    if(old){
+      if(old.key) p.key = old.key;
+      if(old.thumbKey) p.thumbKey = old.thumbKey;
+      if(old.annotKey && old.annotDriveId === p.annotDriveId) p.annotKey = old.annotKey;
+    }
+  }));
+  Object.assign(local, remote, { pendingUpload:false });
+}
+async function purgeTestLocal(t){
+  for(const r of t.rows) for(const p of [...r.qPhotos, ...r.sPhotos]) await purgeRef(p, false);
+}
+async function pushTestMedia(t, folderId){
+  async function pushOne(p, tag){
+    if(!p.driveId && p.key){
+      const rec = await idbGetBlob(p.key);
+      if(rec) p.driveId = await uploadMediaBlob(t.id + '_' + tag + '.jpg', rec.blob, rec.mime || 'image/jpeg', folderId);
+    }
+    if(p.annotKey && !p.annotDriveId){
+      const rec = await idbGetBlob(p.annotKey);
+      if(rec) p.annotDriveId = await uploadMediaBlob(t.id + '_' + tag + '_annot.png', rec.blob, 'image/png', folderId);
+    }
+  }
+  for(const r of t.rows){
+    for(const p of r.qPhotos) await pushOne(p, r.id + '_q');
+    for(const p of r.sPhotos) await pushOne(p, r.id + '_s');
+  }
+}
+async function syncTestsWithDrive(folderId){
+  const fileId = await getOrCreateTestsFile();
+  const res = await driveFetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
+  let remote;
+  try{ remote = await res.json(); }catch(e){ remote = { tests:[], deleted:[] }; }
+  const remoteTests = (remote && remote.tests) || [];
+  const remoteDeleted = (remote && remote.deleted) || [];
+
+  // Tests deleted on another device
+  for(const id of remoteDeleted){
+    tombstones.add(id);
+    const i = state.tests.findIndex(t=> t.id === id);
+    if(i !== -1){
+      const gone = state.tests.splice(i, 1)[0];
+      await purgeTestLocal(gone);
+      if(txUI.testId === id){ txUI.screen = txUI.prevScreen || 'list'; txUI.testId = null; }
+    }
+  }
+  persistTombstones();
+
+  // Pull tests we don't have yet (or newer copies we haven't edited locally)
+  const localById = new Map(state.tests.map(t=> [t.id, t]));
+  for(const r of remoteTests){
+    if(tombstones.has(r.id)) continue;
+    const l = localById.get(r.id);
+    if(!l) state.tests.push(Object.assign(normalizeTest(r), { pendingUpload:false }));
+    else if(new Date(r.updatedAt) > new Date(l.updatedAt) && !l.pendingUpload) adoptRemoteTest(l, r);
+  }
+
+  // Push local changes (photos first, so the index always points at real files)
+  for(const t of state.tests){
+    if(t.pendingUpload){
+      const rev = t._rev || 0;
+      await pushTestMedia(t, folderId);
+      if((t._rev || 0) === rev) t.pendingUpload = false; // edited again mid-upload? stays pending
+    }
+  }
+  const out = {
+    tests: state.tests.map(stripTestForRemote),
+    deleted: Array.from(tombstones).filter(id=> String(id).startsWith('t_'))
+  };
+  await driveFetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
+    method:'PATCH', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(out)
+  });
+  persistTests();
+  renderTestsIfIdle();
+}
+
+/* ============================================================
    INIT
 ============================================================ */
 async function init(){
   applyTheme();
   state.entries = loadEntries();
+  state.tests = loadTests();
   renderGrid();
+  let startView = 'notebook';
+  try{ if(localStorage.getItem(LS_VIEW) === 'tests') startView = 'tests'; }catch(e){ /* ignore */ }
+  setView(startView);
 
   // Prepare the Drive client (cheap, no network call, no popup) so the
   // sign-in button works instantly. Then check for a still-valid token left
